@@ -1,0 +1,12 @@
+{
+    "config": {
+        "main_stack_size": {
+            "value": 12288
+        }
+    },
+    "target_overrides": {
+        "*": {
+            "target.printf_lib" : "std"
+        }
+    }
+}
