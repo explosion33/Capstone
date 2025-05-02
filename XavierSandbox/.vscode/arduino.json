@@ -1,0 +1,8 @@
+{
+    "board": "arduino:avr:uno",
+    "sketch": "XavierSandbox.ino",
+    "port": "COM4",
+    "output": "./build",
+    "intelliSenseGen": "global",
+    "programmer": "avrispmkii"
+}
