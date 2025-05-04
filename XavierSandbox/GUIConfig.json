@@ -267,8 +267,9 @@
             "commandedState": false,
             "inProgress": false,
             "nominalState": false,
-            "mutuallyInclusive": [],
-            "mutuallyExclusive": [],
+            "mutuallyExclusive": [
+                "OBV"
+            ],
             "commandIndex": 4
         },
         "FVV": {
@@ -276,8 +277,9 @@
             "commandedState": false,
             "inProgress": false,
             "nominalState": true,
-            "mutuallyInclusive": [],
-            "mutuallyExclusive": [],
+            "mutuallyExclusive": [
+                "OVV"
+            ],
             "commandIndex": 5
         },
         "OBV": {
@@ -285,8 +287,9 @@
             "commandedState": false,
             "inProgress": false,
             "nominalState": false,
-            "mutuallyInclusive": [],
-            "mutuallyExclusive": [],
+            "mutuallyExclusive": [
+                "HBV"
+            ],
             "commandIndex": 6
         },
         "OPV": {
@@ -294,8 +297,9 @@
             "commandedState": false,
             "inProgress": false,
             "nominalState": false,
-            "mutuallyInclusive": [],
-            "mutuallyExclusive": [],
+            "mutuallyExclusive": [
+                "OVV"
+            ],
             "commandIndex": 7
         },
         "OVV": {
@@ -303,8 +307,10 @@
             "commandedState": false,
             "inProgress": false,
             "nominalState": true,
-            "mutuallyInclusive": [],
-            "mutuallyExclusive": [],
+            "mutuallyExclusive": [
+                "FVV",
+                "OPV"
+            ],
             "commandIndex": 8
         },
         "OMV": {
@@ -312,7 +318,6 @@
             "commandedState": false,
             "inProgress": false,
             "nominalState": false,
-            "mutuallyInclusive": [],
             "mutuallyExclusive": [],
             "commandIndex": 9
         },
@@ -321,7 +326,6 @@
             "commandedState": false,
             "inProgress": false,
             "nominalState": false,
-            "mutuallyInclusive": [],
             "mutuallyExclusive": [],
             "commandIndex": 10
         },

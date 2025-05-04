@@ -33,6 +33,9 @@ BUTTON_ACTIVE_BG = "#00A000"  # Green
 BUTTON_INACTIVE_BG = "#A00000"  # Red
 BUTTON_PENDING_BG = "#FFA500"  # Amber for pending state
 
+# Global override variable
+override_mutual_rules = False
+
 # Create queues for thread communication
 serial_queue = queue.Queue()
 data_queue = queue.Queue()
@@ -362,6 +365,41 @@ def updateSerialButton(state_key, toggle=True):
         fg=BUTTON_FG
     )
 
+def check_mutual_rules(valve_key, new_state):
+    """Check if changing a valve's state would violate mutual exclusivity rules based on nominal states"""
+    global override_mutual_rules
+    
+    # If override is enabled, allow any change
+    if override_mutual_rules:
+        return True
+        
+    # Get the current state of all valves
+    current_states = {}
+    for key in state:
+        if key in mutually_exclusive:
+            current_states[key] = state[key]['currentState']
+            current_states[key + '_nominal'] = state[key]['nominalState']
+    
+    # Check mutual exclusivity rules
+    if valve_key in mutually_exclusive:
+        for exclusive_valve in mutually_exclusive[valve_key]:
+            if exclusive_valve in current_states:
+                # For the valve we're trying to change:
+                # If it's normally closed (nominalState = false), it's open when powered (currentState = true)
+                # If it's normally open (nominalState = true), it's closed when powered (currentState = true)
+                valve_is_open = (new_state != state[valve_key]['nominalState'])
+                
+                # For the exclusive valve:
+                # If it's normally closed, it's open when powered
+                # If it's normally open, it's closed when powered
+                exclusive_is_open = (current_states[exclusive_valve] != current_states[exclusive_valve + '_nominal'])
+                
+                # If both valves would be open, prevent the change
+                if valve_is_open and exclusive_is_open:
+                    return False
+    
+    return True
+
 def updateValveButton(state_key, toggle=True):
     if state[state_key]['currentState'] == None:
         bg = BUTTON_WAITING_BG
@@ -390,13 +428,31 @@ def updateValveButton(state_key, toggle=True):
             fg = BUTTON_FG
         
         if toggle:
-            # Always allow toggling and sending command
-            state[state_key]['commandedState'] = not state[state_key]['commandedState']
-            newCommand[state[state_key]['commandIndex']] = state[state_key]['commandedState']
-            # Update button state immediately
-            buttons[state_key]['button'].config(text=text, bg=bg, fg=fg)
-            # Send command in a separate thread
-            threading.Thread(target=sendCommands, daemon=True).start()
+            # Calculate the new commanded state
+            new_commanded_state = not state[state_key]['commandedState']
+            
+            # Check if the change would violate mutual rules
+            if check_mutual_rules(state_key, new_commanded_state):
+                # Update state and send command
+                state[state_key]['commandedState'] = new_commanded_state
+                newCommand[state[state_key]['commandIndex']] = state[state_key]['commandedState']
+                # Update button state immediately
+                buttons[state_key]['button'].config(text=text, bg=bg, fg=fg)
+                # Send command in a separate thread
+                threading.Thread(target=sendCommands, daemon=True).start()
+                # Clear any error message
+                app.frames[MainPage].error_text.config(text="")
+                # Reset override after successful command
+                app.frames[MainPage].override_var.set(False)
+                global override_mutual_rules
+                override_mutual_rules = False
+            else:
+                # Display error in the error text box
+                error_msg = f"Cannot change {state_key} state - would violate mutual rules"
+                app.frames[MainPage].error_text.config(text=error_msg)
+                # Schedule error message to clear after 3 seconds
+                app.frames[MainPage].after(3000, lambda: app.frames[MainPage].error_text.config(text=""))
+    
     buttons[state_key]['button'].config(text=text, bg=bg, fg=fg)
 
 def updateCommandButton(state_key, toggle=True):
@@ -856,7 +912,9 @@ class MainPage(tk.Frame):
         title_frame.grid(row=0, column=0, columnspan=3, sticky="ew", padx=10, pady=10)
         title_frame.grid_columnconfigure(0, weight=1)  # Give weight to title label
         title_frame.grid_columnconfigure(1, weight=0)  # No weight for banner
-        title_frame.grid_columnconfigure(2, weight=0)  # No weight for exit button
+        title_frame.grid_columnconfigure(2, weight=0)  # No weight for override checkbox
+        title_frame.grid_columnconfigure(3, weight=0)  # No weight for error message
+        title_frame.grid_columnconfigure(4, weight=0)  # No weight for exit button
         
         # Title label
         label = tk.Label(title_frame, text="2025 Capstone Hotfire Test Software", 
@@ -871,6 +929,28 @@ class MainPage(tk.Frame):
                                     fg=BUTTON_WAITING_FG)
         self.hw_arm_banner.grid(row=0, column=1, padx=10, sticky="ew")
         
+        # Override checkbox
+        self.override_var = tk.BooleanVar(value=False)
+        self.override_checkbox = tk.Checkbutton(title_frame,
+                                              text="Override Rules",
+                                              variable=self.override_var,
+                                              bg=BG_COLOR,
+                                              fg=TEXT_FG,
+                                              selectcolor=BUTTON_BG,
+                                              activebackground=BG_COLOR,
+                                              activeforeground=TEXT_FG,
+                                              command=self.toggle_override)
+        self.override_checkbox.grid(row=0, column=2, padx=10, sticky="ew")
+        
+        # Error message text box
+        self.error_text = tk.Label(title_frame,
+                                 text="",
+                                 bg=BG_COLOR,
+                                 fg="#FF0000",  # Red color for errors
+                                 font=("Verdana", 8),
+                                 wraplength=200)  # Wrap text after 200 pixels
+        self.error_text.grid(row=0, column=3, padx=10, sticky="ew")
+        
         # Exit button in title frame
         exit_button = tk.Button(title_frame, 
                               text="Exit", 
@@ -880,7 +960,7 @@ class MainPage(tk.Frame):
                               activeforeground=BUTTON_FG,
                               command=clean_shutdown,
                               width=8)  # Fixed width for the button
-        exit_button.grid(row=0, column=2, padx=(10,0), sticky="e")
+        exit_button.grid(row=0, column=4, padx=(10,0), sticky="e")
 
         # Left frame for buttons with resizable width
         button_frame = tk.Frame(self, bg=BG_COLOR)
@@ -1238,6 +1318,11 @@ class MainPage(tk.Frame):
         # Ensure the resize handle stays visible
         self.v_resize_handle.lift()
 
+    def toggle_override(self):
+        """Toggle the override state for mutual exclusivity rules"""
+        global override_mutual_rules
+        override_mutual_rules = self.override_var.get()
+
 graph_width_ct = 1
 graph_height_ct = 1
 window_width = 720
@@ -1286,7 +1371,6 @@ f = None  # This will be set when MainPage is created
 data = dict()
 state = dict()
 info = dict()
-mutually_inclusive = dict()
 mutually_exclusive = dict()
 
 loop_time = 0
@@ -1304,7 +1388,6 @@ for i in gui_config['state'].keys():
         }
     newCommand[state[i]['commandIndex']] = state[i]['commandedState']
     if state[i]['nominalState'] != None:
-        mutually_inclusive[i] = gui_config['state'][i]['mutuallyInclusive']
         mutually_exclusive[i] = gui_config['state'][i]['mutuallyExclusive']
     
 
