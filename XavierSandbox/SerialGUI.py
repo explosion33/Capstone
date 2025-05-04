@@ -287,7 +287,7 @@ def initSerialConnection():
                     
                     # Update the data reference with the axis
                     for j, data_key in enumerate(graph_config['data_keys']):
-                        data[data_key][0] = ax
+                        data[data_key] = [ax, list(), graph_config['kwargs']]
                     
                     # Force a redraw
                     fig.canvas.draw()
@@ -551,52 +551,52 @@ def sendCommands():
 
 def updateGraphs():
     for graph_config in gui_config['graphs']:
-        for data_key in graph_config['data_keys']:
-            if data_key in data and data[data_key][1]:  # Check data list
-                ax = data[data_key][0]
-                data_list = data[data_key][1]
-                style = data[data_key][2]
+        data_key = graph_config['data_keys']
+        if data_key in data and data[data_key][1]:  # Check data list
+            ax = data[data_key][0]
+            data_list = data[data_key][1]
+            style = data[data_key][2]
+            
+            if len(data_list) > 0:
+                ax.clear()
+                x_vals, y_vals = zip(*data_list)
+                ax.plot(x_vals, y_vals, **style)
+                ax.set_title(graph_config['label'])
+                ax.grid(True, linestyle='--', alpha=0.3)
+                ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M:%S'))
+                ax.set_facecolor(GRAPH_BG)
+                ax.tick_params(colors=GRAPH_FG, labelsize=8)
+                ax.xaxis.label.set_color(GRAPH_FG)
+                ax.yaxis.label.set_color(GRAPH_FG)
+                ax.title.set_color(GRAPH_FG)
+                # Adjust title font size based on length
+                title_length = len(graph_config['label'])
+                if title_length > 20:
+                    ax.title.set_fontsize(8)
+                elif title_length > 15:
+                    ax.title.set_fontsize(9)
+                else:
+                    ax.title.set_fontsize(10)
+                for spine in ax.spines.values():
+                    spine.set_color(GRAPH_FG)
+                plt.setp(ax.get_xticklabels(), rotation=45, ha='right')
                 
-                if len(data_list) > 0:
-                    ax.clear()
-                    x_vals, y_vals = zip(*data_list)
-                    ax.plot(x_vals, y_vals, **style)
-                    ax.set_title(graph_config['label'])
-                    ax.grid(True, linestyle='--', alpha=0.3)
-                    ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M:%S'))
-                    ax.set_facecolor(GRAPH_BG)
-                    ax.tick_params(colors=GRAPH_FG, labelsize=8)
-                    ax.xaxis.label.set_color(GRAPH_FG)
-                    ax.yaxis.label.set_color(GRAPH_FG)
-                    ax.title.set_color(GRAPH_FG)
-                    # Adjust title font size based on length
-                    title_length = len(graph_config['label'])
-                    if title_length > 20:
-                        ax.title.set_fontsize(8)
-                    elif title_length > 15:
-                        ax.title.set_fontsize(9)
-                    else:
-                        ax.title.set_fontsize(10)
-                    for spine in ax.spines.values():
-                        spine.set_color(GRAPH_FG)
-                    plt.setp(ax.get_xticklabels(), rotation=45, ha='right')
-                    
-                    # Set y-axis label using units from config
-                    if 'units' in graph_config and graph_config['units']:
-                        ax.set_ylabel(graph_config['units'][0])
-                    
-                    # Auto-scale axes
-                    ax.relim()
-                    ax.autoscale_view()
-                    
-                    # Set number of ticks (5-10 ticks)
-                    ax.xaxis.set_major_locator(mdates.AutoDateLocator(minticks=5, maxticks=10))
-                    
-                    # Adjust layout to prevent label overlap
-                    ax.figure.subplots_adjust(top=0.85, bottom=0.25, left=0.2, right=0.95)
-                    
-                    # Update the figure
-                    ax.figure.canvas.draw_idle()
+                # Set y-axis label using units from config
+                if 'units' in graph_config and graph_config['units']:
+                    ax.set_ylabel(graph_config['units'])
+                
+                # Auto-scale axes
+                ax.relim()
+                ax.autoscale_view()
+                
+                # Set number of ticks (5-10 ticks)
+                ax.xaxis.set_major_locator(mdates.AutoDateLocator(minticks=5, maxticks=10))
+                
+                # Adjust layout to prevent label overlap
+                ax.figure.subplots_adjust(top=0.85, bottom=0.25, left=0.2, right=0.95)
+                
+                # Update the figure
+                ax.figure.canvas.draw_idle()
 
 def animate(i):
     # Process all available data from the queue
@@ -649,12 +649,12 @@ def animate(i):
     
     # Update value labels
     for graph_config in gui_config['graphs']:
-        for j, data_key in enumerate(graph_config['data_keys']):
-            if data_key in data and data[data_key][1]:
-                # Get the most recent value
-                latest_value = data[data_key][1][-1][1]
-                label = app.frames[MainPage].graph_frames[graph_config['label']][j]
-                label.config(text=f"{data_key}: {latest_value:.2f}")
+        data_key = graph_config['data_keys']
+        if data_key in data and data[data_key][1]:
+            # Get the most recent value
+            latest_value = data[data_key][1][-1][1]
+            label = app.frames[MainPage].graph_frames[graph_config['label']][0]
+            label.config(text=f"{data_key}: {latest_value:.2f}")
     
     updateButtons()
 
@@ -1182,11 +1182,10 @@ class MainPage(tk.Frame):
             
             # Set y-axis label using units from config
             if 'units' in graph_config and graph_config['units']:
-                ax.set_ylabel(graph_config['units'][0])  # Use first unit as y-axis label
+                ax.set_ylabel(graph_config['units'])
             
             # Store the data reference
-            for j, data_key in enumerate(graph_config['data_keys']):
-                data[data_key] = [ax, list(), graph_config['kwargs'][j]]
+            data[graph_config['data_keys']] = [ax, list(), graph_config['kwargs']]
             
             # Create canvas for the graph
             canvas = FigureCanvasTkAgg(fig, graph_container)
@@ -1197,16 +1196,15 @@ class MainPage(tk.Frame):
             value_frame = tk.Frame(graph_container, bg=BG_COLOR)
             value_frame.grid(row=1, column=0, sticky="ew")
             
-            # Create labels for each sensor in the graph
+            # Create label for the sensor
             self.graph_frames[graph_config['label']] = []
-            for j, data_key in enumerate(graph_config['data_keys']):
-                label = tk.Label(value_frame, 
-                               text=f"{data_key}: --",
-                               bg=TEXT_BG,
-                               fg=TEXT_FG,
-                               font=("Verdana", 7))
-                label.grid(row=0, column=j, padx=5)
-                self.graph_frames[graph_config['label']].append(label)
+            label = tk.Label(value_frame, 
+                           text=f"{graph_config['data_keys']}: --",
+                           bg=TEXT_BG,
+                           fg=TEXT_FG,
+                           font=("Verdana", 7))
+            label.grid(row=0, column=0, padx=5)
+            self.graph_frames[graph_config['label']].append(label)
                 
         # Bind resize event to ensure proper resizing
         self.bind("<Configure>", self.on_resize)
