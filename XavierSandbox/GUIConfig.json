@@ -6,6 +6,7 @@
     "button_width": 250,
     "serial_height": 200,
     "graph_fps": 1,
+    "clear_graphs_on_reset": true,
     "graphs": [
         {
             "label": "Helium Bottle Pressure",

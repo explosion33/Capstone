@@ -34,6 +34,7 @@
 #define COUNT_COMMANDS    14
 #define COUNT_SENSORS     14
 #define loopTime          500
+#define PACKET_SIZE       3 // Number of data points to send per packet
 
 const String command_keys[] = {
     "FIRE", "ABORT",   "SW ARM",         "HW ARM",          "HBV", "FVV", "OBV", "OPV", "OVV", "OMV",
@@ -51,6 +52,20 @@ int currentTime;
 int loopIteration = 0;
 long lastLoopTimeTaken;
 long lastLoopStartTime;
+
+// Define which sensors to send in each packet
+const int packet1_sensors[] = {0, 1, 2};   // HBPT, FTPT, OBPT
+const int packet2_sensors[] = {3, 4, 5};   // OVPT, FMPT, OMPT
+const int packet3_sensors[] = {6, 7, 8};   // FRMPT, FRMRTD, FMRTD
+const int packet4_sensors[] = {9, 10, 11}; // HBTT, OBTT, LC
+const int packet5_sensors[] = {12, 13, 0}; // RRTD1, RRTD2, HBPT (wrapping back)
+
+// Define which commands to send in each packet
+const int packet1_commands[] = {0, 1, 2};   // FIRE, ABORT, SW ARM
+const int packet2_commands[] = {3, 4, 5};   // HW ARM, HBV, FVV
+const int packet3_commands[] = {6, 7, 8};   // OBV, OPV, OVV
+const int packet4_commands[] = {9, 10, 11}; // OMV, FMV, IGNITER
+const int packet5_commands[] = {12, 13, 0}; // PULSE OX, PULSE FUEL, FIRE (wrapping back)
 
 void setup() {
     Serial.begin(115200);
@@ -88,47 +103,71 @@ void loop() {
     loopIteration++;
     lastLoopTimeTaken = currentTime - lastLoopStartTime;
     lastLoopStartTime = currentTime;
+
+    // Determine which packet to send (rotate through 5 packets)
+    int packet_num = (loopIteration % 5);
+
+    // Start JSON object
     Serial.print("{");
+
+    // Always send timing information
     Serial.print("\"LoopTime\":");
     Serial.print(lastLoopTimeTaken);
     Serial.print(",");
     Serial.print("\"timeSent\":");
-    Serial.print(millis() - initial_connection_time); // Use time relative to initial connection
-    Serial.print(",");
-    for (int i = 0; i < COUNT_SENSORS; i++) {
+    Serial.print(millis() - initial_connection_time);
+
+    // Send selected sensor data
+    const int *current_sensors = (packet_num == 0)   ? packet1_sensors
+                                 : (packet_num == 1) ? packet2_sensors
+                                 : (packet_num == 2) ? packet3_sensors
+                                 : (packet_num == 3) ? packet4_sensors
+                                                     : packet5_sensors;
+
+    for (int i = 0; i < PACKET_SIZE; i++) {
+        int sensor_index = current_sensors[i];
+        Serial.print(",");
         Serial.print("\"");
-        Serial.print(sensor_keys[i]);
+        Serial.print(sensor_keys[sensor_index]);
         Serial.print("\":");
-        Serial.print(sensor_data[i]);
-        Serial.print(",");
+        Serial.print(sensor_data[sensor_index]);
     }
-    for (int i = 0; i < COUNT_COMMANDS; i++) {
+
+    // Send selected command states
+    const int *current_commands = (packet_num == 0)   ? packet1_commands
+                                  : (packet_num == 1) ? packet2_commands
+                                  : (packet_num == 2) ? packet3_commands
+                                  : (packet_num == 3) ? packet4_commands
+                                                      : packet5_commands;
+
+    for (int i = 0; i < PACKET_SIZE; i++) {
+        int cmd_index = current_commands[i];
+        Serial.print(",");
         Serial.print("\"");
-        Serial.print(command_keys[i]);
+        Serial.print(command_keys[cmd_index]);
         Serial.print("\":[");
-        if ((command_state[i] >> 2) & 0x01) {
+        if ((command_state[cmd_index] >> 2) & 0x01) {
             Serial.print(trueValue);
         } else {
             Serial.print(falseValue);
         }
         Serial.print(",");
-        if ((command_state[i] >> 1) & 0x01) {
+        if ((command_state[cmd_index] >> 1) & 0x01) {
             Serial.print(trueValue);
         } else {
             Serial.print(falseValue);
         }
         Serial.print(",");
-        if ((command_state[i] >> 0) & 0x01) {
+        if ((command_state[cmd_index] >> 0) & 0x01) {
             Serial.print(trueValue);
         } else {
             Serial.print(falseValue);
         }
-        if (i < COUNT_COMMANDS - 1) {
-            Serial.print("],");
-        } else {
-            Serial.print("]}\n");
-        }
+        Serial.print("]");
     }
+
+    // End JSON object
+    Serial.println("}");
 }
 
 void refreshSensors() {

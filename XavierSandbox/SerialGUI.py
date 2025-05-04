@@ -239,7 +239,7 @@ def update_thread_func():
     print("Update thread exiting cleanly")
 
 def initSerialConnection():
-    global serial_thread, data_thread, update_thread, write_thread
+    global serial_thread, data_thread, update_thread, write_thread, initial_connection_time, initial_time
     if ser.is_open:
         return 1
     else:
@@ -248,6 +248,52 @@ def initSerialConnection():
             # Clear any existing data in the buffer
             ser.reset_input_buffer()
             ser.reset_output_buffer()
+            
+            # If clear_graphs_on_reset is true, reset all data and timestamps
+            if gui_config.get('clear_graphs_on_reset', False):
+                initial_connection_time = None
+                initial_time = 0
+                
+                # First clear all data points
+                for key in data:
+                    data[key][1].clear()
+                
+                # Then clear and reset all figures
+                for graph_config in gui_config['graphs']:
+                    # Get the existing figure
+                    fig = app.frames[MainPage].figures[graph_config['label']]
+                    ax = fig.axes[0]  # Get the existing axis
+                    
+                    # Clear the axis
+                    ax.clear()
+                    
+                    # Reset the subplot properties
+                    ax.set_title(graph_config['label'])
+                    fig.subplots_adjust(top=0.85, bottom=0.2, left=0.15, right=0.95)
+                    ax.set_facecolor(GRAPH_BG)
+                    ax.tick_params(colors=GRAPH_FG, labelsize=8)
+                    ax.xaxis.label.set_color(GRAPH_FG)
+                    ax.yaxis.label.set_color(GRAPH_FG)
+                    ax.title.set_color(GRAPH_FG)
+                    ax.title.set_fontsize(10)
+                    for spine in ax.spines.values():
+                        spine.set_color(GRAPH_FG)
+                    ax.grid(True, linestyle='--', alpha=0.3)
+                    ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M:%S'))
+                    plt.setp(ax.get_xticklabels(), rotation=45, ha='right')
+                    
+                    # Update the data reference with the axis
+                    for j, data_key in enumerate(graph_config['data_keys']):
+                        data[data_key][0] = ax
+                    
+                    # Force a redraw
+                    fig.canvas.draw()
+                
+                # Wait a short time to ensure everything is cleared
+                time.sleep(0.1)
+                
+                # Force graph update
+                update_queue.put(True)
             
             # Wait for initial data
             line = ser.readline().decode('utf-8').strip()
