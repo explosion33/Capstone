@@ -1,57 +1,178 @@
 {
-    "graph_width_ct": 2,
-    "graph_height_ct": 2,
-    "graph_fps": 30,
+    "graph_width_ct": 4,
+    "graph_height_ct": 4,
+    "window_width": 1200,
+    "window_height": 900,
+    "button_width": 250,
+    "serial_height": 200,
+    "graph_fps": 1,
     "graphs": [
         {
-            "label": "Graph 1",
+            "label": "Helium Bottle Pressure",
             "graph_index": 1,
             "data_keys": [
-                "data1"
+                "HBPT"
             ],
             "kwargs": [
                 {
-                    "color": "red"
+                    "color": "#FF6B6B",
+                    "linewidth": 2
                 }
             ]
         },
         {
-            "label": "Graph 2",
+            "label": "Helium Bottle Temperature",
             "graph_index": 2,
             "data_keys": [
-                "data2"
+                "HBTT"
             ],
             "kwargs": [
                 {
-                    "color": "green"
+                    "color": "#4ECDC4",
+                    "linewidth": 2
                 }
             ]
         },
         {
-            "label": "Graph 3",
+            "label": "Oxygen Bottle Pressure",
             "graph_index": 3,
             "data_keys": [
-                "data3"
+                "OBPT"
             ],
             "kwargs": [
                 {
-                    "color": "yellow"
+                    "color": "#FFE66D",
+                    "linewidth": 2
                 }
             ]
         },
         {
-            "label": "Graph 4",
+            "label": "Oxygen Bottle Temperature",
             "graph_index": 4,
             "data_keys": [
-                "data3",
-                "data4"
+                "OBTT"
             ],
             "kwargs": [
                 {
-                    "color": "orange"
-                },
+                    "color": "#1A535C",
+                    "linewidth": 2
+                }
+            ]
+        },
+        {
+            "label": "Oxygen Upstream Pressure",
+            "graph_index": 5,
+            "data_keys": [
+                "OVPT"
+            ],
+            "kwargs": [
                 {
-                    "color": "blue"
+                    "color": "#FF9F1C",
+                    "linewidth": 2
+                }
+            ]
+        },
+        {
+            "label": "Oxygen Manifold Pressure",
+            "graph_index": 6,
+            "data_keys": [
+                "OMPT"
+            ],
+            "kwargs": [
+                {
+                    "color": "#7B2CBF",
+                    "linewidth": 2
+                }
+            ]
+        },
+        {
+            "label": "Fuel Manifold Pressure",
+            "graph_index": 7,
+            "data_keys": [
+                "FMPT"
+            ],
+            "kwargs": [
+                {
+                    "color": "#2A9D8F",
+                    "linewidth": 2
+                }
+            ]
+        },
+        {
+            "label": "Fuel Manifold Temperature",
+            "graph_index": 8,
+            "data_keys": [
+                "FMRTD"
+            ],
+            "kwargs": [
+                {
+                    "color": "#E76F51",
+                    "linewidth": 2
+                }
+            ]
+        },
+        {
+            "label": "Fuel Regen Manifold Pressure",
+            "graph_index": 9,
+            "data_keys": [
+                "FRMPT"
+            ],
+            "kwargs": [
+                {
+                    "color": "#F25F5C",
+                    "linewidth": 2
+                }
+            ]
+        },
+        {
+            "label": "Fuel Regen Manifold Temperature",
+            "graph_index": 10,
+            "data_keys": [
+                "FRMRTD"
+            ],
+            "kwargs": [
+                {
+                    "color": "#70C1B3",
+                    "linewidth": 2
+                }
+            ]
+        },
+        {
+            "label": "Fuel Tank Pressure",
+            "graph_index": 11,
+            "data_keys": [
+                "FTPT"
+            ],
+            "kwargs": [
+                {
+                    "color": "#247BA0",
+                    "linewidth": 2
+                }
+            ]
+        },
+        {
+            "label": "Regen Channel Temperature Upstream",
+            "graph_index": 12,
+            "data_keys": [
+                "RRTD1"
+            ],
+            "kwargs": [
+                {
+                    "color": "#FFC857",
+                    "linewidth": 2
+                }
+            ]
+        },
+        {
+            "label": "Regen Channel Temperature Downstream",
+            "graph_index": 13,
+            "data_keys": [
+                "RRTD2"
+            ],
+            "kwargs": [
+                {
+                    "color": "#323031",
+                    "linewidth": 2
                 }
             ]
         }
@@ -60,70 +181,116 @@
         "FIRE": {
             "currentState": null,
             "commandedState": false,
-            "nominalState": null
-        },
-        "HBV": {
-            "currentState": null,
-            "commandedState": false,
-            "nominalState": false,
-            "mutuallyInclusive": [],
-            "mutuallyExclusive": []
-        },
-        "FVV": {
-            "currentState": null,
-            "commandedState": false,
-            "nominalState": true,
-            "mutuallyInclusive": [],
-            "mutuallyExclusive": []
-        },
-        "OBV": {
-            "currentState": null,
-            "commandedState": false,
-            "nominalState": false,
-            "mutuallyInclusive": [],
-            "mutuallyExclusive": []
-        },
-        "OPV": {
-            "currentState": null,
-            "commandedState": false,
-            "nominalState": false,
-            "mutuallyInclusive": [],
-            "mutuallyExclusive": []
-        },
-        "OVV": {
-            "currentState": null,
-            "commandedState": false,
-            "nominalState": true,
-            "mutuallyInclusive": [],
-            "mutuallyExclusive": []
-        },
-        "OMV": {
-            "currentState": null,
-            "commandedState": false,
-            "nominalState": false,
-            "mutuallyInclusive": [],
-            "mutuallyExclusive": []
-        },
-        "FMV": {
-            "currentState": null,
-            "commandedState": false,
-            "nominalState": false,
-            "mutuallyInclusive": [],
-            "mutuallyExclusive": []
+            "inProgress": false,
+            "nominalState": null,
+            "commandIndex": 0
         },
         "ABORT": {
             "currentState": null,
             "commandedState": false,
-            "nominalState": null
+            "inProgress": false,
+            "nominalState": null,
+            "commandIndex": 1
         },
         "SW ARM": {
             "currentState": null,
             "commandedState": false,
-            "nominalState": null
+            "inProgress": false,
+            "nominalState": null,
+            "commandIndex": 2
+        },
+        "HW ARM": {
+            "currentState": null,
+            "commandedState": false,
+            "inProgress": false,
+            "nominalState": null,
+            "commandIndex": 3
+        },
+        "HBV": {
+            "currentState": null,
+            "commandedState": false,
+            "inProgress": false,
+            "nominalState": false,
+            "mutuallyInclusive": [],
+            "mutuallyExclusive": [],
+            "commandIndex": 4
+        },
+        "FVV": {
+            "currentState": null,
+            "commandedState": false,
+            "inProgress": false,
+            "nominalState": true,
+            "mutuallyInclusive": [],
+            "mutuallyExclusive": [],
+            "commandIndex": 5
+        },
+        "OBV": {
+            "currentState": null,
+            "commandedState": false,
+            "inProgress": false,
+            "nominalState": false,
+            "mutuallyInclusive": [],
+            "mutuallyExclusive": [],
+            "commandIndex": 6
+        },
+        "OPV": {
+            "currentState": null,
+            "commandedState": false,
+            "inProgress": false,
+            "nominalState": false,
+            "mutuallyInclusive": [],
+            "mutuallyExclusive": [],
+            "commandIndex": 7
+        },
+        "OVV": {
+            "currentState": null,
+            "commandedState": false,
+            "inProgress": false,
+            "nominalState": true,
+            "mutuallyInclusive": [],
+            "mutuallyExclusive": [],
+            "commandIndex": 8
+        },
+        "OMV": {
+            "currentState": null,
+            "commandedState": false,
+            "inProgress": false,
+            "nominalState": false,
+            "mutuallyInclusive": [],
+            "mutuallyExclusive": [],
+            "commandIndex": 9
+        },
+        "FMV": {
+            "currentState": null,
+            "commandedState": false,
+            "inProgress": false,
+            "nominalState": false,
+            "mutuallyInclusive": [],
+            "mutuallyExclusive": [],
+            "commandIndex": 10
+        },
+        "IGNITER": {
+            "currentState": null,
+            "commandedState": false,
+            "inProgress": false,
+            "nominalState": false,
+            "mutuallyInclusive": [],
+            "mutuallyExclusive": [],
+            "commandIndex": 11
+        },
+        "PULSE OX 100ms": {
+            "currentState": null,
+            "commandedState": false,
+            "inProgress": false,
+            "nominalState": null,
+            "commandIndex": 12
+        },
+        "PULSE FUEL 100ms": {
+            "currentState": null,
+            "commandedState": false,
+            "inProgress": false,
+            "nominalState": null,
+            "commandIndex": 13
         }
-    },
-    "info": {
-        "boot_time": 0.0,
-        "hw_armed": false
     }
 }

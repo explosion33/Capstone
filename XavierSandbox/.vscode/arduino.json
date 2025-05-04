@@ -1,6 +1,6 @@
 {
     "board": "arduino:avr:nano",
-    "port": "COM5",
+    "port": "COM6",
     "defaultBaudRate": "9600",
     "configuration": "cpu=atmega328old",
     "sketch": "XavierSandbox.ino"
