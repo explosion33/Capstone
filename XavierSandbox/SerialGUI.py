@@ -513,10 +513,21 @@ def updateGraphs():
                     ax.xaxis.label.set_color(GRAPH_FG)
                     ax.yaxis.label.set_color(GRAPH_FG)
                     ax.title.set_color(GRAPH_FG)
-                    ax.title.set_fontsize(10)
+                    # Adjust title font size based on length
+                    title_length = len(graph_config['label'])
+                    if title_length > 20:
+                        ax.title.set_fontsize(8)
+                    elif title_length > 15:
+                        ax.title.set_fontsize(9)
+                    else:
+                        ax.title.set_fontsize(10)
                     for spine in ax.spines.values():
                         spine.set_color(GRAPH_FG)
                     plt.setp(ax.get_xticklabels(), rotation=45, ha='right')
+                    
+                    # Set y-axis label using units from config
+                    if 'units' in graph_config and graph_config['units']:
+                        ax.set_ylabel(graph_config['units'][0])
                     
                     # Auto-scale axes
                     ax.relim()
@@ -524,6 +535,9 @@ def updateGraphs():
                     
                     # Set number of ticks (5-10 ticks)
                     ax.xaxis.set_major_locator(mdates.AutoDateLocator(minticks=5, maxticks=10))
+                    
+                    # Adjust layout to prevent label overlap
+                    ax.figure.subplots_adjust(top=0.85, bottom=0.25, left=0.2, right=0.95)
                     
                     # Update the figure
                     ax.figure.canvas.draw_idle()
@@ -1065,18 +1079,30 @@ class MainPage(tk.Frame):
             
             # Create the subplot with adjusted margins
             ax = fig.add_subplot(111, title=graph_config['label'])
-            fig.subplots_adjust(top=0.85, bottom=0.2, left=0.15, right=0.95)
+            # Adjust margins to prevent label overlap
+            fig.subplots_adjust(top=0.85, bottom=0.25, left=0.2, right=0.95)
             ax.set_facecolor(GRAPH_BG)
             ax.tick_params(colors=GRAPH_FG, labelsize=8)
             ax.xaxis.label.set_color(GRAPH_FG)
             ax.yaxis.label.set_color(GRAPH_FG)
             ax.title.set_color(GRAPH_FG)
-            ax.title.set_fontsize(10)
+            # Adjust title font size based on length
+            title_length = len(graph_config['label'])
+            if title_length > 20:
+                ax.title.set_fontsize(8)
+            elif title_length > 15:
+                ax.title.set_fontsize(9)
+            else:
+                ax.title.set_fontsize(10)
             for spine in ax.spines.values():
                 spine.set_color(GRAPH_FG)
             ax.grid(True, linestyle='--', alpha=0.3)
             ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M:%S'))
             plt.setp(ax.get_xticklabels(), rotation=45, ha='right')
+            
+            # Set y-axis label using units from config
+            if 'units' in graph_config and graph_config['units']:
+                ax.set_ylabel(graph_config['units'][0])  # Use first unit as y-axis label
             
             # Store the data reference
             for j, data_key in enumerate(graph_config['data_keys']):

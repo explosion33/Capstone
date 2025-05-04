@@ -33,7 +33,7 @@
 #define OFFSET_state      2
 #define COUNT_COMMANDS    14
 #define COUNT_SENSORS     14
-#define loopTime          500
+#define loopTime          100
 #define PACKET_SIZE       3 // Number of data points to send per packet
 
 const String command_keys[] = {
