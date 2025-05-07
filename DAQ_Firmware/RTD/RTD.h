@@ -1,3 +1,11 @@
+/* SensorEventQueue
+ * Ethan Armstrong
+ * warmst@uw.edu
+ *
+ * A wrapper for the MAX31865 PT-100 chip that supports
+ * SensorEventQueue
+ */
+
 #include "mbed.h"
 #include <cstdint>
 

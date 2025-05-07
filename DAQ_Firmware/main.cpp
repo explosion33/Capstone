@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "RTD.h"
+#include "ADC.h"
 #include "SensorEventQueue.h"
 
 #define UART_TX PA_2
@@ -98,12 +99,19 @@ int main() {
 
     // =========== RTD Setup ===========
     RTD rtd1("RTD1", &spi, PB_6);
-    RTD rtd2("RTD2", &spi, PB_6);
-    RTD rtd3("RTD3", &spi, PB_6);
-    vector<RTD*> rtds = {&rtd1, &rtd2, &rtd3};
+    vector<RTD*> rtds = {&rtd1};
 
     for (RTD* rtd : rtds) {
         queue.queue(callback(rtd, &RTD::sample_log), 90);
+    }
+    // =================================
+
+    // =========== ADC Setup ===========
+    ADCSensor adc1("ADC1", PC_0, 1.5f, 0, 5);
+    vector<ADCSensor*> adcs = {&adc1};
+
+    for (ADCSensor* adc : adcs) {
+        queue.queue(callback(adc, &ADCSensor::sample_log), 20);
     }
     // =================================
     
@@ -114,6 +122,9 @@ int main() {
     // =========== GUI Comms ===========
     int i = 0;
     char buf[256] = {0};
+
+    Timer h;
+    h.start();
 
     while (true) {
         if (read_flag == true) {
@@ -138,6 +149,13 @@ int main() {
                         rtd->last_data(&value, &raw, &time);
                         printf_nb("\"%s\" : [%d, %f, %d],\n", rtd->name, time, value, raw);                     
                     }
+                    for (ADCSensor* adc : adcs) {
+                        int time;
+                        float value;
+                        float raw;
+                        adc->last_data(&value, &raw, &time);
+                        printf_nb("\"%s\" : [%d, %f, %f],\n", adc->name, time, value, raw);                     
+                    }
                     printf_nb("}\n");
                     
                 }
@@ -149,6 +167,7 @@ int main() {
 
             read_flag = false;
         }
+        ThisThread::yield();
     }
     // =================================
 }

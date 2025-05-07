@@ -1,3 +1,10 @@
+/* SensorEventQueue
+ * Ethan Armstrong
+ * warmst@uw.edu
+ *
+ * An implementation of an EventQueue implementing periodic sensor measurements
+ */
+
 #include "mbed.h"
 #include <vector>
 
@@ -10,7 +17,7 @@ class SensorEventQueue {
     public:
         // SensorEventQueue | creates a new, empty, SensorEventQueue object
         SensorEventQueue();
-        
+
         /* run | runs event queue, blocks forever
         */
         void run();

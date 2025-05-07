@@ -25,8 +25,7 @@ void SensorEventQueue::run() {
             }
         }
 
-        //printf_nb("%d, %d, %d\n", curr_time, next, next_diff);
-
+        // if next_exec time has passed
         if (next_diff >= 0) {
             this->events[next].fn();
             this->events[next].next_exec_ms = curr_time + this->events[next].frequency_ms;
