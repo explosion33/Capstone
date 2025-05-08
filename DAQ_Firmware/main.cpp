@@ -5,6 +5,7 @@
 
 #include "RTD.h"
 #include "ADC.h"
+#include "LoadCellSensor.h"
 #include "SensorEventQueue.h"
 
 #define UART_TX PA_2
@@ -97,6 +98,11 @@ int main() {
     //Ticker load_ticker;
     //Ticker rtd_ticker;
 
+    // ======== Load Cell Setup ========
+    LoadCellSensor lc1("LC1", PA_0, PA_1, 1.892f, 4.55f, 4.55f, 588.399f);
+    queue.queue(callback(&lc1, &LoadCellSensor::sample_log), 100);
+    // =================================
+
     // =========== RTD Setup ===========
     RTD rtd1("RTD1", &spi, PB_6);
     vector<RTD*> rtds = {&rtd1};
@@ -156,6 +162,13 @@ int main() {
                         adc->last_data(&value, &raw, &time);
                         printf_nb("\"%s\" : [%d, %f, %f],\n", adc->name, time, value, raw);                     
                     }
+
+                    int time;
+                    float value;
+                    float raw;
+                    lc1.last_data(&value, &raw, &time);
+                    printf_nb("\"%s\" : [%d, %f, %f]\n", lc1.name, time, value, raw);
+
                     printf_nb("}\n");
                     
                 }
