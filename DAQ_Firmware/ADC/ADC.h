@@ -47,6 +47,8 @@ class ADCSensor {
         // set offset | sets the ADC offset
         void set_offset(float offset);
 
+        void tare(float expected);
+
         const char* name;
     private:
         Timer t;

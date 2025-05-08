@@ -1,6 +1,8 @@
 #include "ADC.h"
 
 void ADCSensor::sample_log() {
+    this->dataMutex.lock();
+
     float raw = 0;
     for (int i = 0; i<this->samples; i++) {
         raw += this->adc.read();
@@ -12,7 +14,6 @@ void ADCSensor::sample_log() {
     val *= this->gain;
     val += this->offset;
 
-    this->dataMutex.lock();
 
     this->raw = raw;
     this->value = val;
@@ -46,5 +47,24 @@ void ADCSensor::set_offset(float offset) {
 
     this->offset = offset;
     
+    this->dataMutex.unlock();
+}
+
+void ADCSensor::tare(float expected) {
+    this->dataMutex.lock();
+
+    float raw = 0;
+    for (int i = 0; i<100; i++) {
+        raw += this->adc.read();
+        ThisThread::sleep_for(10ms);
+    }
+
+    raw /= 100.0f;
+
+    float val = raw * 3.3f;
+    val *= this->gain;
+
+    this->offset = expected - val;
+
     this->dataMutex.unlock();
 }

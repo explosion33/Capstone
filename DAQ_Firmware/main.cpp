@@ -147,29 +147,60 @@ int main() {
                     printf_nb("%s\n", buf);
                     printf_nb("=========================================================\n");
 
-                    printf_nb("{\n");
-                    for (RTD* rtd : rtds) {
-                        int time;
-                        float value;
-                        uint16_t raw;
-                        rtd->last_data(&value, &raw, &time);
-                        printf_nb("\"%s\" : [%d, %f, %d],\n", rtd->name, time, value, raw);                     
+                    char name[50] = {0};
+                    float tare;
+                    int res = sscanf(buf, "\"%[^\"]\": %f", name, &tare);
+                    if (res == 2) {
+                        if (strcmp(lc1.name, name) == 0) {
+                            printf_nb("taring: %s to %f\n", name, tare);
+                            lc1.tare(tare);
+                        }
+                        else {
+                            bool found = false;
+                            for (ADCSensor* adc : adcs) {
+                                if (strcmp(adc->name, name) == 0) {
+                                    found = true;
+                                    printf_nb("taring: %s to %f\n", name, tare);
+                                    adc->tare(tare);
+                                    break;
+                                }
+                            }
+
+                            if (!found) {
+                                printf_nb("Sensor does not exist\n");
+                            }
+                        }
+
+                        printf_nb("DONE\n");
+
                     }
-                    for (ADCSensor* adc : adcs) {
+                    else {
+                        printf_nb("{\n");
+                        for (RTD* rtd : rtds) {
+                            int time;
+                            float value;
+                            uint16_t raw;
+                            rtd->last_data(&value, &raw, &time);
+                            printf_nb("\"%s\" : [%d, %f, %d],\n", rtd->name, time, value, raw);                     
+                        }
+                        for (ADCSensor* adc : adcs) {
+                            int time;
+                            float value;
+                            float raw;
+                            adc->last_data(&value, &raw, &time);
+                            printf_nb("\"%s\" : [%d, %f, %f],\n", adc->name, time, value, raw);                     
+                        }
+
                         int time;
                         float value;
                         float raw;
-                        adc->last_data(&value, &raw, &time);
-                        printf_nb("\"%s\" : [%d, %f, %f],\n", adc->name, time, value, raw);                     
+                        lc1.last_data(&value, &raw, &time);
+                        printf_nb("\"%s\" : [%d, %f, %f]\n", lc1.name, time, value, raw);
+
+                        printf_nb("}\n");
                     }
 
-                    int time;
-                    float value;
-                    float raw;
-                    lc1.last_data(&value, &raw, &time);
-                    printf_nb("\"%s\" : [%d, %f, %f]\n", lc1.name, time, value, raw);
-
-                    printf_nb("}\n");
+                    i = 0;
                     
                 }
                 else {

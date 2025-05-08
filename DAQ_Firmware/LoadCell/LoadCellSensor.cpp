@@ -2,18 +2,25 @@
 
 // sample_log | takes an ADC sample, updates internal values, and logs to SD (TODO)
 void LoadCellSensor::sample_log() {
+    this->dataMutex.lock();
+
+    int ms = t.read_ms();
+
     if (!hx711.isReady()) {
+        this->value = NAN;
+        this->raw = NAN;
+        this->time = ms;
+
+        this->dataMutex.unlock();
+
         return;
     }
 
     float _raw = hx711.read();
-    float mV = (raw - this->offset);    // read voltage in mV
 
-    float _value = (mV) / (this->MVV * this->excitation) * this->gain;
+    float _value = (_raw) / (this->MVV * this->excitation) * this->gain;
+    _value += this->offset;
     
-    int ms = t.read_ms();
-
-    this->dataMutex.lock();
 
     this->raw = _raw;
     this->time = ms;
@@ -53,6 +60,28 @@ void LoadCellSensor::set_offset(float offset) {
     this->dataMutex.lock();
 
     this->offset = offset;
+
+    this->dataMutex.unlock();
+}
+
+void LoadCellSensor::tare(float expected) {
+    this->dataMutex.lock();
+
+    float _raw = 0;
+
+    for (int i = 0; i<100; i++) {
+        if (!hx711.isReady()) {
+            continue;
+        }
+
+        _raw += hx711.read();
+    }
+
+    _raw /= 100.0f;
+
+    float _value = (_raw) / (this->MVV * this->excitation) * this->gain;
+
+    this->offset = expected - _value;
 
     this->dataMutex.unlock();
 }
