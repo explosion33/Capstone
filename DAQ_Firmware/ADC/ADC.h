@@ -31,7 +31,9 @@ class ADCSensor {
                 t.start();
             }
 
-        // sample_log | takes an ADC sample, updates internal values, and logs to SD (TODO)
+        void set_sd(FILE** sd, Mutex* sd_mutex);
+
+        // sample_log | takes an ADC sample, updates internal values, and logs to SD
         void sample_log();
 
         /* last_data | gets data from the last sample_log call
@@ -61,6 +63,9 @@ class ADCSensor {
         float value;
         int time;
         Mutex dataMutex;
+
+        FILE** sd;
+        Mutex* sd_mutex;
 
 };
 

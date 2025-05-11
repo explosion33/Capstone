@@ -1,26 +1,18 @@
 #include "LoadCellSensor.h"
 
-// sample_log | takes an ADC sample, updates internal values, and logs to SD (TODO)
 void LoadCellSensor::sample_log() {
     this->dataMutex.lock();
-
     int ms = t.read_ms();
 
-    if (!hx711.isReady()) {
-        this->value = NAN;
-        this->raw = NAN;
-        this->time = ms;
+    float _raw = NAN;
+    float _value = NAN;
 
-        this->dataMutex.unlock();
+    if (hx711.isReady()) {
+        _raw = hx711.read();
 
-        return;
+        _value = (_raw) / (this->MVV * this->excitation) * this->gain;
+        _value += this->offset;
     }
-
-    float _raw = hx711.read();
-
-    float _value = (_raw) / (this->MVV * this->excitation) * this->gain;
-    _value += this->offset;
-    
 
     this->raw = _raw;
     this->time = ms;
@@ -28,7 +20,18 @@ void LoadCellSensor::sample_log() {
 
     this->dataMutex.unlock();
 
-    // TODO: Write to SD Card
+    if (this->sd_mutex == nullptr)
+        return;
+
+    this->sd_mutex->lock();
+    if (this->sd == nullptr || *this->sd == nullptr) {
+        this->sd_mutex->unlock();
+        return;
+    }
+
+    fprintf(*this->sd, "\"%s\", %f, %f, %d\n", this->name, _value, _raw, ms);
+    fflush(*this->sd);
+    this->sd_mutex->unlock();
 }
 
 /* last_data | gets data from the last sample_log call
@@ -84,4 +87,9 @@ void LoadCellSensor::tare(float expected) {
     this->offset = expected - _value;
 
     this->dataMutex.unlock();
+}
+
+void LoadCellSensor::set_sd(FILE** sd, Mutex* sd_mutex) {
+    this->sd = sd;
+    this->sd_mutex = sd_mutex;
 }

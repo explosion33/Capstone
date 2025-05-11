@@ -6,7 +6,8 @@
     },
     "target_overrides": {
         "*": {
-            "target.printf_lib" : "std"
+            "target.printf_lib" : "std",
+            "target.components_add" : ["SD"]
         }
     }
 }

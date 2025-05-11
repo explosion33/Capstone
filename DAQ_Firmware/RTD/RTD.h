@@ -25,7 +25,7 @@ class RTD {
          */
         RTD(const char* name, SPI* spi, PinName cs);
 
-        // sample_log | samples data, and logs it to an SD Card (TODO)
+        // sample_log | samples data, and logs it to an SD Card
         void sample_log();
 
         /* last_data | gets data from the last sample_log call
@@ -35,6 +35,8 @@ class RTD {
          */
         void last_data(float* value, uint16_t* raw, int* ms);
 
+
+        void set_sd(FILE** sd, Mutex* sd_mutex);
         
         const char* name;
     private:
@@ -52,6 +54,9 @@ class RTD {
         void writeRegister8(uint8_t addr, uint8_t data);
         void readRegisterN(uint8_t address, uint8_t buffer[], uint8_t n);
         uint8_t readRegister8(uint8_t addr);
+
+        FILE** sd;
+        Mutex* sd_mutex;
 
 };
 

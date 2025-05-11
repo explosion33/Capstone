@@ -25,7 +25,18 @@ void RTD::sample_log() {
     this->_last_raw = raw;
     data_mutex.unlock();
 
-    // TODO: Add SD Card logging here;
+    if (this->sd_mutex == nullptr)
+        return;
+
+    this->sd_mutex->lock();
+    if (this->sd == nullptr || *this->sd == nullptr) {
+        this->sd_mutex->unlock();
+        return;
+    }
+
+    fprintf(*this->sd, "\"%s\", %f, %d, %d\n", this->name, temp, raw, ms);
+    fflush(*this->sd);
+    this->sd_mutex->unlock();
 }
 
 
@@ -106,4 +117,9 @@ void RTD::last_data(float* value, uint16_t* raw, int* ms) {
     *ms    = this->_last_time;
 
     this->data_mutex.unlock();
+}
+
+void RTD::set_sd(FILE** sd, Mutex* sd_mutex) {
+    this->sd = sd;
+    this->sd_mutex = sd_mutex;
 }

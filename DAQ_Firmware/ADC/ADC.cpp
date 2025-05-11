@@ -21,7 +21,23 @@ void ADCSensor::sample_log() {
 
     this->dataMutex.unlock();
 
-    // TODO write to SD card
+    if (this->sd_mutex == nullptr)
+        return;
+        
+    this->sd_mutex->lock();
+    if (this->sd == nullptr || *this->sd == nullptr) {
+        this->sd_mutex->unlock();
+        return;
+    }
+
+    fprintf(*this->sd, "\"%s\", %f, %f, %d\n", this->name, val, raw, ms);
+    fflush(*this->sd);
+    this->sd_mutex->unlock();
+}
+
+void ADCSensor::set_sd(FILE** sd, Mutex* sd_mutex) {
+    this->sd = sd;
+    this->sd_mutex = sd_mutex;
 }
 
 void ADCSensor::last_data(float* value, float* raw, int* ms) {

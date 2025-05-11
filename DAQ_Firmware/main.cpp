@@ -188,40 +188,100 @@ vector<DigitalOut> solenoids;
     }
 // =================================================
 
+
+#include "SDBlockDevice.h"
+#include "FATFileSystem.h"
+#define SD_MOSI PA_7
+#define SD_MISO PA_6
+#define SD_SCLK PA_5
+#define SD_CS   PB_6
+SDBlockDevice _sd(SD_MOSI, SD_MISO, SD_SCLK, SD_CS, 1000000);
+FATFileSystem _fs("sd");
+
+
+void deinit_sd(FILE*& file, Mutex& sd_mutex) {
+    sd_mutex.lock();
+
+    if (file == nullptr) {
+        sd_mutex.unlock();
+        return;
+    }
+
+    fclose(file);
+    file = nullptr;
+    _fs.unmount();
+    sd_mutex.unlock();
+}
+
+bool init_sd(FILE*& file, const char* path) {
+    int init_err = _sd.init();
+    if (init_err) {
+        log_nb("SD init failed: %d\n", init_err);
+        return false;
+    }
+
+    int err = _fs.mount(&_sd);
+    if (err) {
+        log_nb("No filesystem found. Formatting...\n");
+        err = FATFileSystem::format(&_sd);
+        if (err) {
+            log_nb("Format failed.\n");
+            return false;
+        }
+        _fs.mount(&_sd);
+    }
+
+    // clear file, then open in append mode
+    FILE *f = fopen(path, "w");
+    fclose(f);
+    f = fopen(path, "a");
+   
+    file = f;
+    return true;
+}
+
+
+
 int main() {
     ser.sigio(serial_isr); // enable serial interrupt
 
-    // SPI setup for RTDs
-    SPI spi(PA_7, PA_6, PA_5);
-    spi.format(8, 1); 
+    FILE* sd = nullptr;
+    Mutex sd_mutex;
+
     
     SensorEventQueue queue;   
 
     // ======== Load Cell Setup ========
-        LoadCellSensor lc1("LC1", PA_0, PA_1, 1.892f, 4.55f, 4.55f, 588.399f);
+        LoadCellSensor lc1("LC1", PB_10, PB_14, 1.892f, 4.55f, 4.55f, 588.399f);
+        lc1.set_sd(&sd, &sd_mutex);
         queue.queue(callback(&lc1, &LoadCellSensor::sample_log), 100);
     // =================================
 
     // =========== RTD Setup ===========
-        RTD rtd1("RTD1", &spi, PB_6);
+        SPI spi(PB_2, PC_11, PC_10);
+        spi.format(8, 1); 
+
+        RTD rtd1("RTD1", &spi, PC_3);
         vector<RTD*> rtds = {&rtd1};
 
         for (RTD* rtd : rtds) {
+            rtd->set_sd(&sd, &sd_mutex);
             queue.queue(callback(rtd, &RTD::sample_log), 90);
         }
     // =================================
 
     // =========== ADC Setup ===========
-        ADCSensor adc1("ADC1", PC_0, 1.5f, 0, 5);
+        ADCSensor adc1("ADC0", PA_0, 1.5f, 0, 5);
         vector<ADCSensor*> adcs = {&adc1};
 
         for (ADCSensor* adc : adcs) {
+            adc->set_sd(&sd, &sd_mutex);
             queue.queue(callback(adc, &ADCSensor::sample_log), 20);
         }
     // =================================
     
     // ======== Actuation Setup ========
-        PinName actuation_pins[12] = {PC_3, PC_2, PB_9, PB_8, PC_13, PB_7, PA_15, PA_14, PA_13, PC_12, PC_10, PC_11};
+        PinName actuation_pins[12] = {PB_15, PC_6, PC_7, PC_8, PC_9, PA_8, PA_9, PA_10, PA_11, PA_12, PA_15, PC_12};
         // declared in global
         // vector<DigitalOut> solenoids;
         for (PinName pin: actuation_pins) {
@@ -244,8 +304,13 @@ int main() {
 
     Thread* cmd_thread = new Thread;
 
+    Timer kl;
+    int kl_count = 0;
+    kl.start();
+
     while (true) {
         if (read_flag == true) {
+            kl.reset();
             while (ser.readable()) {
                 char c = 0;
                 ser.read(&c, 1);
@@ -355,6 +420,27 @@ int main() {
                             printf_nb("Invalid Command\n");
                         }
                     }
+                    else if (buf[0] == 'D') {
+                        if (buf[1] == 'E') {
+                            log_nb("Ejecting SD Card\n");
+                            deinit_sd(sd, sd_mutex);
+                            log_nb("Ejected\n");
+                        }
+                        else if (buf[1] == 'M') {
+                            log_nb("Mounting SD Card\n");
+                            log_nb("path: %s\n", &buf[2]);
+                            deinit_sd(sd, sd_mutex);
+                            if (!init_sd(sd, &buf[2])) {
+                                log_nb("Failed to Mount SD\n");
+                            }
+                            else {
+                                log_nb("Mounted Succesfully\n");
+                            }
+                        }
+                        else {
+                            log_nb("Disk Command Not Found\n");
+                        }
+                    }
 
                     else { // No Command Found, Log Data
                         printf_nb("{\n");
@@ -392,6 +478,12 @@ int main() {
             }
 
             read_flag = false;
+        }
+
+        if (kl.read_ms() > 60000) {
+            kl_count ++;
+            log_nb("Keep Alive, %d minutes\n", kl_count);
+            kl.reset();
         }
         ThisThread::yield();
     }

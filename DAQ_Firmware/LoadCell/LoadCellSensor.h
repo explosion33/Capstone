@@ -25,7 +25,7 @@ class LoadCellSensor {
                 t.start();
             }
 
-        // sample_log | takes an ADC sample, updates internal values, and logs to SD (TODO)
+        // sample_log | takes an ADC sample, updates internal values, and logs to SD
         void sample_log();
 
         /* last_data | gets data from the last sample_log call
@@ -43,6 +43,8 @@ class LoadCellSensor {
 
         void tare(float expected);
 
+        void set_sd(FILE** sd, Mutex* sd_mutex);
+
         const char* name;
 
     private:
@@ -58,6 +60,9 @@ class LoadCellSensor {
         float raw;
         int time;
         Mutex dataMutex;
+
+        FILE** sd;
+        Mutex* sd_mutex;
 
 };
 
