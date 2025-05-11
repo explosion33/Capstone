@@ -77,3 +77,20 @@
        {CHP}    // pulse 100ms
        {CHP500} // pulse 500ms
     ```
+
+5. Mount Disk
+
+    mounts an SD card and opens a file at the given path for sensor logging
+
+    ```
+    // {DM/sd/<path>}
+       {DM/sd/log.txt}
+    ```
+
+6. Eject Disk
+
+    flushes and ejects SD card for safe removal (extremely important, this isn't like windows where ejecting is optionally (usually))
+
+    ```
+    {DE}
+    ```
