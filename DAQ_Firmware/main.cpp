@@ -1,3 +1,13 @@
+/* DAQ Firmware
+ * Ethan Armstrong
+ * warmst@uw.edu
+ *
+ * Reads data from RTDs PTs TTs and a load cell.
+ * Controls 8 actuator channels.
+ * Logs all data over serial terminal
+ * while accepting serial commands for actuation,
+ * tareing, and command sequences
+ */
 #include "mbed.h"
 #include <cstdint>
 #include <cstdio>
