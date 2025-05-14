@@ -528,7 +528,12 @@ int main() {
                             float raw;
                             lc1.last_data(&value, &raw, &time);
 
-                            printf_nb("\"%s\" : [%d, %f, %f] ", lc1.name, time, value, raw);
+                            printf_nb("\"%s\" : [%d, %f, %f], ", lc1.name, time, value, raw);
+                            printf_nb("\"actuators\" : [%d, %d, %d, %d, %d, %d, %d, %d]",
+                                solenoids[0].read() == 0, solenoids[1].read() == 0, solenoids[2].read() == 0,
+                                solenoids[3].read() == 0, solenoids[4].read() == 0, solenoids[6].read() == 0,
+                                solenoids[8].read() == 0, solenoids[9].read() == 0
+                            );
 
                             printf_nb("}\n");
 
