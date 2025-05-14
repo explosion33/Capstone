@@ -42,6 +42,8 @@ class ADCSensor {
          *     ms    (int*)   | int to put reading time in milliseconds into
          */
         void last_data(float* value, float* raw, int* ms);
+        
+        void deltas(float* dv, int* dt);
 
         // set_gain | sets the ADC gain
         void set_gain(float gain);
@@ -62,6 +64,9 @@ class ADCSensor {
         float raw;
         float value;
         int time;
+
+        float last_value;
+        int last_time;
         Mutex dataMutex;
 
         FILE** sd;

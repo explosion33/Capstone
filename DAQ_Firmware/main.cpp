@@ -243,6 +243,17 @@ vector<DigitalOut> solenoids;
     }
 // =================================================
 
+#define OX_VOLUME 0.04413f
+#define HE_VOLUME 0.04413f 
+#define OX_R      297.0f
+#define HE_R      2077.0f
+#define HE_PT     4
+#define HE_TT     0
+#define OX_PT     2
+#define OX_TT     3
+float mass_flow(float dpres, float dtemp, float volume, float R, float dt) {
+    return (dpres * volume) / (R * dtemp * dt);
+}
 
 int main() {
     ser.sigio(serial_isr); // enable serial interrupt
@@ -257,36 +268,36 @@ int main() {
         LoadCellSensor lc1("LC1", PB_10, PB_14, 1.892f, 4.55f, 4.55f, 588.399f);
         lc1.set_sd(&sd, &sd_mutex);
         queue.queue(callback(&lc1, &LoadCellSensor::sample_log), 100);
-    // =================================
+    //  =================================
 
     // =========== RTD Setup ===========
-        SPI spi(PB_2, PC_11, PC_10);
-        spi.format(8, 1); 
+        vector<RTD*> rtds;
+        //SPI spi(PB_2, PC_11, PC_10);
+        //spi.format(8, 1); 
 
-        RTD rtd0("RTD0", &spi, PC_3);
-        RTD rtd1("RTD1", &spi, PB_12);
-        RTD rtd2("RTD2", &spi, PB_13);
-        RTD rtd3("RTD3", &spi, PB_7);
-        vector<RTD*> rtds = {&rtd0, &rtd1, &rtd2, &rtd3};
+        //RTD rtd0("RTD0", &spi, PC_3);
+        //RTD rtd1("RTD1", &spi, PB_12);
+        //RTD rtd2("RTD2", &spi, PB_13);
+        //RTD rtd3("RTD3", &spi, PB_7);
+        //vector<RTD*> rtds = {&rtd0, &rtd1, &rtd2, &rtd3};
 
-        for (RTD* rtd : rtds) {
-            rtd->set_sd(&sd, &sd_mutex);
-            queue.queue(callback(rtd, &RTD::sample_log), 90);
-        }
+        //for (RTD* rtd : rtds) {
+        //    rtd->set_sd(&sd, &sd_mutex);
+        //    queue.queue(callback(rtd, &RTD::sample_log), 90);
+        //}
     // =================================
 
     // =========== ADC Setup ===========
-        ADCSensor adc0("ADC0", PA_0, 1.5f, 0, 5);
-        ADCSensor adc1("ADC1", PA_1, 1.5f, 0, 5);
-        ADCSensor adc2("ADC2", PA_4, 1.5f, 0, 5);
-        ADCSensor adc3("ADC3", PC_4, 1.5f, 0, 5);
-        ADCSensor adc4("ADC4", PC_5, 1.5f, 0, 5);
-        ADCSensor adc5("ADC5", PB_0, 1.5f, 0, 5);
-        ADCSensor adc6("ADC6", PB_1, 1.5f, 0, 5);
-        ADCSensor adc7("ADC7", PC_0, 1.5f, 0, 5);
-        ADCSensor adc8("ADC8", PC_1, 1.5f, 0, 5);
-        ADCSensor adc9("ADC9", PC_2, 1.5f, 0, 5);
-        vector<ADCSensor*> adcs = {&adc0, &adc1, &adc2, &adc3, &adc4, &adc5, &adc6, &adc7, &adc8, &adc9};
+        ADCSensor adc0("HBTT", PC_3, (1.5f / 4.0f) * 160, -63.0f, 5);
+        ADCSensor adc1("FTPT", PC_0, (1.5f / 4.0f) * 500, -63.5f, 5);
+        ADCSensor adc2("OBPT", PC_2, (1.5f / 4.0f) * 5000, -625.0f, 20);
+        ADCSensor adc3("OBTT", PC_1, (1.5f / 4.0f) * 160, -63.0f, 5);
+        ADCSensor adc4("HBPT", PB_0, (1.5f / 4.0f) * 5000, -625.0f, 20);
+        ADCSensor adc5("OVPT", PA_4, (1.5f / 4.0f) * 500,-62.5f, 5);
+        ADCSensor adc6("ADC6", PA_1, 1.5f, 0, 5);
+        ADCSensor adc7("ADC7", PA_0, 1.5f, 0, 5);
+        ADCSensor adc8("ADC8", PC_5, 1.5f, 0, 5);
+        vector<ADCSensor*> adcs = {&adc0, &adc1, &adc2, &adc3, &adc4, &adc5, &adc6, &adc7, &adc8};
 
         for (ADCSensor* adc : adcs) {
             adc->set_sd(&sd, &sd_mutex);
@@ -321,6 +332,11 @@ int main() {
         kl.start();
 
         while (true) {
+            // why tf does the if statement fix everything
+            if (read_flag == false && ser.readable()) {
+                log_nb("UH OH\n");
+            }
+
             if (read_flag == true) {
                 kl.reset();
                 while (ser.readable()) {
@@ -457,29 +473,66 @@ int main() {
                         }
 
                         else { // No Command Found, Log Data
-                            printf_nb("{\n");
+                            printf_nb("{");
                             for (RTD* rtd : rtds) {
                                 int time;
                                 float value;
                                 uint16_t raw;
                                 rtd->last_data(&value, &raw, &time);
-                                printf_nb("\"%s\" : [%d, %f, %d],\n", rtd->name, time, value, raw);                     
+                                printf_nb("\"%s\" : [%d, %f, %d], ", rtd->name, time, value, raw);                     
                             }
                             for (ADCSensor* adc : adcs) {
                                 int time;
                                 float value;
                                 float raw;
                                 adc->last_data(&value, &raw, &time);
-                                printf_nb("\"%s\" : [%d, %f, %f],\n", adc->name, time, value, raw);                     
+                                printf_nb("\"%s\" : [%d, %f, %f], ", adc->name, time, value, raw);                     
                             }
+
+                            float he_dpres;
+                            float he_temp;
+                            int he_dt;
+
+                            float ox_dpres;
+                            float ox_temp;
+                            int ox_dt;
+
+                            int he_time;
+                            int ox_time;
+
+                            adcs[HE_TT]->last_data(&he_temp, &he_dpres, &he_time);
+                            adcs[OX_TT]->last_data(&ox_temp, &he_dpres, &ox_time);
+
+                            adcs[HE_PT]->deltas(&he_dpres, &he_dt);
+                            //adcs[HE_TT]->deltas(&he_dtemp, &he_dt);
+                            
+                            adcs[OX_PT]->deltas(&ox_dpres, &ox_dt);
+                            //adcs[OX_TT]->deltas(&ox_dtemp, &ox_dt);
+
+                            he_dpres *= 6895.0f; // PSI to Pa
+                            ox_dpres *= 6895.0f; // PSI to Pa
+
+                            he_temp += 273.15; // C to K
+                            ox_temp += 273.15; // C to K
+
+                            float he_dt_s = he_dt / 1000.0f; // ms to seconds
+                            float ox_dt_s = he_dt / 1000.0f; // ms to seconds
+
+                            float he_mfr = mass_flow(he_dpres, he_temp, HE_VOLUME, HE_R, he_dt);
+                            float ox_mfr = mass_flow(ox_dpres, ox_temp, OX_VOLUME, OX_R, ox_dt);
+                            printf_nb("\"HE MFR\" : [%d, %f], ", he_time, he_mfr);
+                            printf_nb("\"OX MFR\" : [%d, %f], ", ox_time, ox_mfr);
 
                             int time;
                             float value;
                             float raw;
                             lc1.last_data(&value, &raw, &time);
-                            printf_nb("\"%s\" : [%d, %f, %f]\n", lc1.name, time, value, raw);
+
+                            printf_nb("\"%s\" : [%d, %f, %f] ", lc1.name, time, value, raw);
 
                             printf_nb("}\n");
+
+                            //log_nb("mfr calc: %f, %f, %f\n", ox_dpres, ox_temp, ox_dt_s);
                         }
 
                         i = 0;
@@ -494,7 +547,7 @@ int main() {
                 read_flag = false;
             }
 
-            if (kl.read_ms() > 60000) {
+            if (kl.read_ms() > 10000) {
                 kl_count ++;
                 log_nb("Keep Alive, %d minutes\n", kl_count);
                 kl.reset();

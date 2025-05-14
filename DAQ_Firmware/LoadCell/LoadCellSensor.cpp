@@ -4,8 +4,8 @@ void LoadCellSensor::sample_log() {
     this->dataMutex.lock();
     int ms = t.read_ms();
 
-    float _raw = NAN;
-    float _value = NAN;
+    float _raw = -1.0f;
+    float _value = -1.0f;
 
     if (hx711.isReady()) {
         _raw = hx711.read();

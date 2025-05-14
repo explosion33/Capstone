@@ -14,6 +14,8 @@ void ADCSensor::sample_log() {
     val *= this->gain;
     val += this->offset;
 
+    this->last_value = this->value;
+    this->last_time = this->time;
 
     this->raw = raw;
     this->value = val;
@@ -23,7 +25,7 @@ void ADCSensor::sample_log() {
 
     if (this->sd_mutex == nullptr)
         return;
-        
+
     this->sd_mutex->lock();
     if (this->sd == nullptr || *this->sd == nullptr) {
         this->sd_mutex->unlock();
@@ -47,6 +49,15 @@ void ADCSensor::last_data(float* value, float* raw, int* ms) {
     *raw = this->raw;
     *ms = this->time;
     
+    this->dataMutex.unlock();
+}
+
+void ADCSensor::deltas(float* dv, int* dt) {
+    this->dataMutex.lock();
+
+    *dv = this->value - this->last_value;
+    *dt = this->time - this->last_time;
+
     this->dataMutex.unlock();
 }
 
