@@ -270,7 +270,7 @@ if "__main__" in __name__:
     trx.start()
     ttx.start()
 
-    ani = FuncAnimation(fig, update, interval=200, blit=True)
+    ani = FuncAnimation(fig, update, interval=10, blit=True)
     plt.show()
 
     
