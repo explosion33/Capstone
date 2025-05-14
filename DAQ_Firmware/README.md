@@ -39,16 +39,16 @@
 
     Actuate each solenoid group directly according to the table below, also found on [This Google Sheet](https://docs.google.com/spreadsheets/d/1ON2VdkJxlJqttcMQD-l6U2NdHoalpuC-nYF2xrq4dh4/edit?gid=0#gid=0). Actuation channel is the physical actuation hardware channel each device occupies. Command Channel is the command position (\<C0\> --> \<C7\>).
 		
-    | Name	                | Abbreviation	| Nominal State	   | Actuation Channel (0-12) | Command Channel |
-    | ----------------------|---------------|------------------|--------------------------|-----------------|
-    | Helium Bottle Valve	| HBV	        | Closed	       | 0                        | 0               |
-    | Oxygen Bottle Valve	| OBV	        | Closed	       | 1                        | 1               |
-    | Oxygen Purge Valve	| OPV	        | Closed	       | 2                        | 2               |
-    | Oxygen Main Valve	    | OMV	        | Closed	       | 6, 7                     | 3               |
-    | Oxygen Vent Valve	    | OVV	        | Closed	       | 4, 5                     | 4               |
-    | Fuel Vent Valve	    | FVV	        | Closed	       | 3                        | 5               |
-    | Fuel Main Valve	    | FMV	        | Closed	       | 8                        | 6               |
-    | Igniter	            | IGN	        | Off	           | 9, 10, 11                | 7               |
+    | Name	            | Abbreviation  | Nominal State    | Actuation Channel (0-12) | Command Channel | Physical Pins       |
+    | ----------------------|---------------|------------------|--------------------------|-----------------|---------------------|
+    | Helium Bottle Valve   | HBV	    | Closed	       | 0                        | 0               | PB_15               |
+    | Oxygen Bottle Valve   | OBV	    | Closed	       | 1                        | 1               | PC_6                |
+    | Oxygen Purge Valve    | OPV	    | Closed	       | 2                        | 2               | PC_7                |
+    | Fuel Vent Valve	    | FVV	    | Closed	       | 3                        | 3               | PC_8                |
+    | Oxygen Vent Valve	    | OVV	    | Closed	       | 4, 5                     | 4               | PC_9, PA_8          |
+    | Oxygen Main Valve	    | OMV	    | Closed	       | 6, 7                     | 5               | PA_9, PA_10         |
+    | Fuel Main Valve	    | FMV	    | Closed	       | 8                        | 6               | PA_11		  |
+    | Igniter	            | IGN	    | Off	       | 9, 10, 11                | 7               | PA_12, PA_15, PC_12 |
 
     ```
     // {S<C0><C1><C2><C3><C4><C5><C6><C7>}
@@ -58,7 +58,7 @@
 
     \* Command Channels work with P-TYPE transistors / mofsets, so writing a `'1'` pulls each physical line low
 
-4. Command Sequences
+5. Command Sequences
 
     Have the DAQ perform a pre-loaded command sequence as follows:
 
@@ -78,7 +78,7 @@
        {CHP500} // pulse 500ms
     ```
 
-5. Mount Disk
+6. Mount Disk
 
     mounts an SD card and opens a file at the given path for sensor logging
 
@@ -87,7 +87,7 @@
        {DM/sd/log.txt}
     ```
 
-6. Eject Disk
+7. Eject Disk
 
     flushes and ejects SD card for safe removal (extremely important, this isn't like windows where ejecting is optionally (usually))
 
