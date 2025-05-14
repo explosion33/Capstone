@@ -258,9 +258,8 @@ def serial_tx():
     """Sends data periodically over the serial port."""
     global run_threads
     while run_threads:
-        if not in_use:
-            ser.write(b"{}")
-            time.sleep(0.05)
+        ser.write(b"{}")
+        time.sleep(0.05)
 
 # ===================================================================
 
