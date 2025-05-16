@@ -21,7 +21,7 @@ from functools import partial
 
 
 # Configuration
-COM_PORT = 'COM14'
+COM_PORT = 'COM27'
 
 CHARTS  = ["HBPT", "OBPT", "OVPT", "HBTT", "OBTT", "FTPT", "ADC6", "ADC7", "ADC8", "HE MFR", "OX MFR", "EMPTY"]
 TITLES  = ["HBPT", "OBPT", "OVPT", "HBTT", "OBTT", "FTPT", "---", "---", "---", "HE MFR", "OX MFR", "---"]
@@ -120,13 +120,14 @@ data_y = [
     [],
     [], #empty
 ]
+TITLES  = ["HBPT", "OBPT", "OVPT", "HBTT", "OBTT", "FTPT", "---", "---", "---", "HE MFR", "OX MFR", "---"]
 
 y_scale = [
-    [-50, 130],
-    [-100, 600],
-    [-100, 2200],
-    [-50, 130],
     [-100, 3200],
+    [-100, 2200],
+    [-100, 600],
+    [-50, 130],
+    [-50, 130],
     [-100, 600],
     [-1, 6],
     [-1, 6],
@@ -270,7 +271,7 @@ if "__main__" in __name__:
     trx.start()
     ttx.start()
 
-    ani = FuncAnimation(fig, update, interval=10, blit=True)
+    ani = FuncAnimation(fig, update, interval=5, blit=True)
     plt.show()
 
     
