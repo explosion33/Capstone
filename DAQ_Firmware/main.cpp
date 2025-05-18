@@ -261,6 +261,7 @@ vector<DigitalOut> solenoids;
 #define HE_TT     0
 #define OX_PT     2
 #define OX_TT     3
+
 float mass_flow(float dpres, float dtemp, float volume, float R, float dt) {
     return (dpres * volume) / (R * dtemp * dt);
 }
@@ -281,20 +282,20 @@ int main() {
     //  =================================
 
     // =========== RTD Setup ===========
-        vector<RTD*> rtds;
-        //SPI spi(PB_2, PC_11, PC_10);
-        //spi.format(8, 1); 
+        //vector<RTD*> rtds;
+        SPI spi(PB_2, PC_11, PC_10);
+        spi.format(8, 1); 
 
-        //RTD rtd0("RTD0", &spi, PC_3);
-        //RTD rtd1("RTD1", &spi, PB_12);
-        //RTD rtd2("RTD2", &spi, PB_13);
-        //RTD rtd3("RTD3", &spi, PB_7);
-        //vector<RTD*> rtds = {&rtd0, &rtd1, &rtd2, &rtd3};
+        RTD rtd0("RTD0", &spi, PC_3);
+        RTD rtd1("RTD1", &spi, PB_12);
+        RTD rtd2("RTD2", &spi, PB_13);
+        RTD rtd3("RTD3", &spi, PB_7);
+        vector<RTD*> rtds = {&rtd0, &rtd1, &rtd2, &rtd3};
 
-        //for (RTD* rtd : rtds) {
-        //    rtd->set_sd(&sd, &sd_mutex);
-        //    queue.queue(callback(rtd, &RTD::sample_log), 90);
-        //}
+        for (RTD* rtd : rtds) {
+            rtd->set_sd(&sd, &sd_mutex);
+            queue.queue(callback(rtd, &RTD::sample_log), 90);
+        }
     // =================================
 
     // =========== ADC Setup ===========
@@ -328,6 +329,7 @@ int main() {
 
 
     Thread t;
+    //t.set_priority(osPriorityBelowNormal);
     t.start(callback(&queue, &SensorEventQueue::run));
 
     // =========== GUI Comms ===========
