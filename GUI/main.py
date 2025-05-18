@@ -15,21 +15,54 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 import time
 import serial
 import json
+import queue
 from threading import Thread
 from datetime import datetime
 from functools import partial
 
 
 # Configuration
-COM_PORT = 'COM27'
+COM_PORT = 'COM12'
 
-CHARTS  = ["HBPT", "OBPT", "OVPT", "HBTT", "OBTT", "FTPT", "ADC6", "ADC7", "ADC8", "HE MFR", "OX MFR", "EMPTY"]
-TITLES  = ["HBPT", "OBPT", "OVPT", "HBTT", "OBTT", "FTPT", "---", "---", "---", "HE MFR", "OX MFR", "---"]
+CHARTS = ["HBPT"  , "OBPT"  , "OVPT", "RTD0",
+          "HBTT"  , "OBTT"  , "FTPT", "RTD1",
+          "ADC6"  , "ADC7"  , "ADC8", "RTD2",
+          "HE MFR", "OX MFR", "LC1" , "RTD3",
+          ]
+
+TITLES = ["HBPT"  , "NBPT" , "NVPT", "---",
+          "HBTT"  , "NBTT" , "WTPT", "---",
+          "---"  , "---" , "---", "---",
+          "HE MFR", "N MFR", "---" , "---",
+          ]
+
+y_scale = [
+    [-1000, 5200],
+    [-1000, 5200],
+    [-100, 600],
+    [-80, 160],
+    [-80, 160],
+    [-80, 160],
+    [-100, 600],
+    [-80, 160],
+    [-2, 7],
+    [-2, 7],
+    [-2, 7],
+    [-80, 160],
+    [-0.1, 0.3],
+    [-0.1, 0.3],
+    [-200, 5000],
+    [-80, 160],
+]
+
+
+#CHARTS  = ["HBPT", "OBPT", "OVPT", "HBTT", "OBTT", "FTPT", "ADC6", "ADC7", "ADC8", "HE MFR", "OX MFR", "EMPTY", "EMPTY", "EMPTY", "EMPTY", "EMPTY"]
+#TITLES  = ["HBPT", "OBPT", "OVPT", "HBTT", "OBTT", "FTPT", "---", "---", "---", "HE MFR", "OX MFR", "RTD0", "RTD1", "RTD2", "RTD3", "Load Cell",]
 BUTTONS = ["Mount", "Eject", "Fire", "Abort", "Pulse OX", "Pulse HE", "Pulse Fuel", "HBV Toggle", "OBV Toggle", "OPV Toggle", "FVV Toggle", "OVV Toggle", "OMV Toggle", "FMV Toggle", "IGN Toggle"]
 ACTUATOR_INDEX = 7
 
 ser = serial.Serial(COM_PORT, 115200, timeout=1)
-in_use = False
+tx_queue = queue.Queue()
 run_threads = True
 
     
@@ -40,11 +73,11 @@ fig = plt.figure(figsize=(12,8))
 fig.canvas.manager.set_window_title("SARP OTV DAQ")
 plt.get_current_fig_manager().window.setWindowIcon(QIcon("icon.png"))
 
-gs_main = GridSpec(1,2, width_ratios=[1,10], figure=fig)
+gs_main = GridSpec(1,2, width_ratios=[1,15], figure=fig)
 
 gs_buttons = gs_main[0,0].subgridspec(len(BUTTONS), 1, hspace=0.3)
 
-gs_plots = gs_main[0, 1].subgridspec(4, 3, hspace=0.4)
+gs_plots = gs_main[0, 1].subgridspec(4, 4, hspace=0.2)
 
 
 lines = []
@@ -55,30 +88,29 @@ actuator_states      = [0,0,0,0,0,0,0,0]
 def on_button_clicked(index, _event):
     print("Button Clicked: ", index)
 
-    in_use = True
     if index == 0:
         print("Mounting at /sd/log.txt")
-        ser.write(b"{DM/sd/log.txt}\n")
+        tx_queue.put(b"{DM/sd/log.txt}\n")
     elif index == 1:
         print("ejecting")
-        ser.write(b"{DE}\n")
+        tx_queue.put(b"{DE}\n")
     elif index == 2:
         print("Firing")
-        ser.write(b"{CFI}\n")
+        tx_queue.put(b"{CFI}\n")
     elif index == 3:
         print("Aborting")
-        ser.write(b"{CAB}\n")
+        tx_queue.put(b"{CAB}\n")
     elif index == 4:
         print("Pulsing Ox")
-        ser.write(b"{COP}\n")
+        tx_queue.put(b"{COP}\n")
     elif index == 5:
         print("Pulsing HE")
-        ser.write(b"{CHP}\n")
+        tx_queue.put(b"{CHP}\n")
     elif index == 6:
         print("Pulsing Fuel")
-        ser.write(b"{CFP}\n")
+        tx_queue.put(b"{CFP}\n")
     elif index >= 7:
-        print("Toggling HBV")
+        print("Toggling Actuator")
         
         new = actuator_states
         new[index - ACTUATOR_INDEX] = 1 if new[index - ACTUATOR_INDEX] == 0 else 0
@@ -87,55 +119,16 @@ def on_button_clicked(index, _event):
         cmd_str = "{S" + state_str + "}\n"
         cmd_bytes = cmd_str.encode('utf-8')
 
-        ser.write(cmd_bytes)
+        tx_queue.put(cmd_bytes)
         
 
+data_x = []
+data_y = []
 
-data_x = [
-    [],
-    [],
-    [],
-    [],
-    [],
-    [],
-    [],
-    [],
-    [],
-    [],
-    [],
-    [], #empty
-]
+for chart in CHARTS:
+    data_x.append([])
+    data_y.append([])
 
-data_y = [
-    [],
-    [],
-    [],
-    [],
-    [],
-    [],
-    [],
-    [],
-    [],
-    [],
-    [],
-    [], #empty
-]
-TITLES  = ["HBPT", "OBPT", "OVPT", "HBTT", "OBTT", "FTPT", "---", "---", "---", "HE MFR", "OX MFR", "---"]
-
-y_scale = [
-    [-100, 3200],
-    [-100, 2200],
-    [-100, 600],
-    [-50, 130],
-    [-50, 130],
-    [-100, 600],
-    [-1, 6],
-    [-1, 6],
-    [-1, 6],
-    [-0.1, 0.3],
-    [-0.1, 0.3],
-    [-1, 6],
-]
 
 texts = []
 
@@ -143,7 +136,7 @@ axs = []
 plot_index = 0
 
 for row in range(4):
-    for col in range(0,3):
+    for col in range(4):
         ax = fig.add_subplot(gs_plots[row, col])
         ax.set_ylim(y_scale[plot_index][0], y_scale[plot_index][1])
         ax.set_xlim(0, 20)
@@ -175,10 +168,13 @@ for i, label in enumerate(BUTTONS):
 def update(frame):
     global actuator_states
     for i in range(ACTUATOR_INDEX, len(BUTTONS)):
-        color = "green" if (actuator_states[i-ACTUATOR_INDEX] == 1) else "lightgrey"
+        color = "#90EE90" if (actuator_states[i-ACTUATOR_INDEX] == 1) else "#FFA500"
+        hcolor = "#BDFCC9" if (color == "#90EE90") else "#FFD580"
         if buttons[i].color != color:
             buttons[i].color = color
-            buttons[i].ax.figure.canvas.draw()
+            buttons[i].hovercolor = hcolor
+            buttons[i].ax.set_facecolor(color)  # Set the Axes background directly
+            buttons[i].ax.figure.canvas.draw_idle()
 
     for i, line in enumerate(lines):
         # New x and y data
@@ -204,7 +200,6 @@ def update(frame):
 def serial_rx():
     """Continuously reads from serial and logs complete lines."""
     buffer = b''
-    global in_use
     global run_threads
     global actuator_states
     while run_threads:
@@ -248,8 +243,8 @@ def serial_rx():
                                 print(line[line.find("log")::])
                                 
                         else:
-                            if in_use and ("done" in line.lower()):
-                                in_use = False
+                            #if in_use and ("done" in line.lower()):
+                            #    in_use = False
                             if not (("recieved" in line) or ("UH OH" in line)):
                                 print(f"[{datetime.now()}] {line}")
         except Exception as e:
@@ -258,9 +253,16 @@ def serial_rx():
 def serial_tx():
     """Sends data periodically over the serial port."""
     global run_threads
-    while run_threads:
-        ser.write(b"{}")
-        time.sleep(0.05)
+    last_execute = time.time()
+    print(last_execute)
+    while run_threads:        
+        while not tx_queue.empty():
+            ser.write(tx_queue.get_nowait())
+
+        if time.time() - last_execute > 0.05:
+            ser.write(b"{}")
+            last_execute = time.time()
+        time.sleep(0.0005)
 
 # ===================================================================
 
