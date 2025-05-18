@@ -30,10 +30,10 @@ CHARTS = ["HBPT"  , "OBPT"  , "OVPT", "RTD0",
           "HE MFR", "OX MFR", "LC1" , "RTD3",
           ]
 
-TITLES = ["HBPT"  , "NBPT" , "NVPT", "---",
-          "HBTT"  , "NBTT" , "WTPT", "---",
-          "---"  , "---" , "---", "---",
-          "HE MFR", "N MFR", "---" , "---",
+TITLES = ["HBPT"  , "NBPT" , "NVPT", "RTD0",
+          "HBTT"  , "NBTT" , "WTPT", "RTD1",
+          "ADC6"  , "ADC7" , "ADC8", "RTD2",
+          "HE MFR", "N MFR", "LC1" , "RTD3",
           ]
 
 y_scale = [
@@ -254,12 +254,15 @@ def serial_tx():
     """Sends data periodically over the serial port."""
     global run_threads
     last_execute = time.time()
-    print(last_execute)
     while run_threads:        
         while not tx_queue.empty():
             ser.write(tx_queue.get_nowait())
+            ser.flush()
+            print("sent command")
 
-        if time.time() - last_execute > 0.05:
+
+
+        if time.time() - last_execute > 0.06:
             ser.write(b"{}")
             last_execute = time.time()
         time.sleep(0.0005)
