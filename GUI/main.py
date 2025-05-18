@@ -7,11 +7,15 @@
 import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Button
-from matplotlib.gridspec import GridSpec
 from matplotlib.animation import FuncAnimation
-from PyQt6.QtGui import QIcon
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+
+from PyQt6.QtGui import QIcon
+from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QHBoxLayout, QVBoxLayout
+
+import sys
 import time
 import serial
 import json
@@ -36,6 +40,7 @@ TITLES = ["HBPT"  , "NBPT" , "NVPT", "RTD0",
           "HE MFR", "N MFR", "LC1" , "RTD3",
           ]
 
+
 y_scale = [
     [-1000, 5200],
     [-1000, 5200],
@@ -55,9 +60,6 @@ y_scale = [
     [-80, 160],
 ]
 
-
-#CHARTS  = ["HBPT", "OBPT", "OVPT", "HBTT", "OBTT", "FTPT", "ADC6", "ADC7", "ADC8", "HE MFR", "OX MFR", "EMPTY", "EMPTY", "EMPTY", "EMPTY", "EMPTY"]
-#TITLES  = ["HBPT", "OBPT", "OVPT", "HBTT", "OBTT", "FTPT", "---", "---", "---", "HE MFR", "OX MFR", "RTD0", "RTD1", "RTD2", "RTD3", "Load Cell",]
 BUTTONS = ["Mount", "Eject", "Fire", "Abort", "Pulse OX", "Pulse HE", "Pulse Fuel", "HBV Toggle", "OBV Toggle", "OPV Toggle", "FVV Toggle", "OVV Toggle", "OMV Toggle", "FMV Toggle", "IGN Toggle"]
 ACTUATOR_INDEX = 7
 
@@ -69,15 +71,18 @@ run_threads = True
 # =============== Setup MatPlotLib charts and buttons ===============
 matplotlib.use('QtAgg')
 
-fig = plt.figure(figsize=(12,8))
-fig.canvas.manager.set_window_title("SARP OTV DAQ")
+# Create a separate figure for charts
+fig_charts = plt.figure(figsize=(12, 8))
+fig_charts.canvas.manager.set_window_title("SARP OTV DAQ - Charts")
 plt.get_current_fig_manager().window.setWindowIcon(QIcon("icon.png"))
+gs_plots = fig_charts.add_gridspec(4, 4, hspace=0.2)
 
-gs_main = GridSpec(1,2, width_ratios=[1,15], figure=fig)
+# Create a second figure for buttons
+fig_buttons = plt.figure(figsize=(3, 8))
+fig_buttons.canvas.manager.set_window_title("SARP OTV DAQ - Controls")
+plt.get_current_fig_manager().window.setWindowIcon(QIcon("icon.png"))
+gs_buttons = fig_buttons.add_gridspec(len(BUTTONS), 1, hspace=0.3)
 
-gs_buttons = gs_main[0,0].subgridspec(len(BUTTONS), 1, hspace=0.3)
-
-gs_plots = gs_main[0, 1].subgridspec(4, 4, hspace=0.2)
 
 
 lines = []
@@ -137,7 +142,7 @@ plot_index = 0
 
 for row in range(4):
     for col in range(4):
-        ax = fig.add_subplot(gs_plots[row, col])
+        ax = fig_charts.add_subplot(gs_plots[row, col])
         ax.set_ylim(y_scale[plot_index][0], y_scale[plot_index][1])
         ax.set_xlim(0, 20)
         ax.set_title(TITLES[plot_index])
@@ -160,7 +165,7 @@ for row in range(4):
 plt.tight_layout()
 
 for i, label in enumerate(BUTTONS):
-    ax_btn = fig.add_subplot(gs_buttons[i, 0])
+    ax_btn = fig_buttons.add_subplot(gs_buttons[i, 0])
     btn = Button(ax_btn, label)
     btn.on_clicked(partial(on_button_clicked, i))
     buttons.append(btn)
@@ -269,17 +274,48 @@ def serial_tx():
 
 # ===================================================================
 
-if "__main__" in __name__:
+if __name__ == "__main__":
+    # Start threads
     trx = Thread(target=serial_rx, daemon=True)
     ttx = Thread(target=serial_tx, daemon=True)
-    
     trx.start()
     ttx.start()
 
-    ani = FuncAnimation(fig, update, interval=5, blit=True)
-    plt.show()
+    app = QApplication(sys.argv)
 
-    
+    # Configure Charts to be animated, and have proper margins
+    fig_charts.subplots_adjust(left=0.05, right=0.95, top=0.95, bottom=0.05, hspace=0.25, wspace=0.25)
+    ani = FuncAnimation(fig_charts, update, interval=5, blit=True)
+
+    # Setup Canvas' and Layouts
+    canvas_charts = FigureCanvas(fig_charts)
+    canvas_buttons = FigureCanvas(fig_buttons)
+
+    main_window = QMainWindow()
+    main_widget = QWidget()
+    main_layout = QVBoxLayout()
+    layout = QHBoxLayout()
+
+    # Add figures to data layout
+    layout.addWidget(canvas_buttons, 1)
+    layout.addWidget(canvas_charts, 10)
+
+    # add toolbar and data layout to main layout
+    main_layout.addWidget(NavigationToolbar(canvas_charts, canvas_charts), 0)
+    main_layout.addLayout(layout)
+
+    # setup main widget
+    main_widget.setLayout(main_layout)
+    main_window.setCentralWidget(main_widget)
+    main_window.setWindowTitle("SARP OTV DAQ GUI")
+    main_window.setWindowIcon(QIcon("icon.png"))
+
+    # run GUI
+    main_window.show()
+    exit_code = app.exec()
+
+    # Threads cleanup
     run_threads = False
     trx.join()
     ttx.join()
+    sys.exit(exit_code)
