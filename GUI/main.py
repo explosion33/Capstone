@@ -26,7 +26,6 @@ from functools import partial
 
 
 # Configuration
-COM_PORT = 'COM12'
 
 CHARTS = ["HBPT"  , "OBPT"  , "OVPT", "RTD0",
           "HBTT"  , "OBTT"  , "FTPT", "RTD1",
@@ -63,7 +62,8 @@ y_scale = [
 BUTTONS = ["Mount", "Eject", "Fire", "Abort", "Pulse OX", "Pulse HE", "Pulse Fuel", "HBV Toggle", "OBV Toggle", "OPV Toggle", "FVV Toggle", "OVV Toggle", "OMV Toggle", "FMV Toggle", "IGN Toggle"]
 ACTUATOR_INDEX = 7
 
-ser = serial.Serial(COM_PORT, 115200, timeout=1)
+ser = None
+ser_lock = False
 tx_queue = queue.Queue()
 run_threads = True
 
@@ -93,6 +93,9 @@ actuator_states      = [0,0,0,0,0,0,0,0]
 def on_button_clicked(index, _event):
     print("Button Clicked: ", index)
 
+    if (ser == None):
+        return
+
     if index == 0:
         print("Mounting at /sd/log.txt")
         tx_queue.put(b"{DM/sd/log.txt}\n")
@@ -117,8 +120,10 @@ def on_button_clicked(index, _event):
     elif index >= 7:
         print("Toggling Actuator")
         
-        new = actuator_states
+        new = actuator_states.copy()
         new[index - ACTUATOR_INDEX] = 1 if new[index - ACTUATOR_INDEX] == 0 else 0
+        print(new)
+        print(actuator_states)
 
         state_str = ''.join(str(bit) for bit in new)
         cmd_str = "{S" + state_str + "}\n"
@@ -136,7 +141,6 @@ for chart in CHARTS:
 
 
 texts = []
-
 axs = []
 plot_index = 0
 
@@ -208,6 +212,9 @@ def serial_rx():
     global run_threads
     global actuator_states
     while run_threads:
+        if ser == None or ser_lock:
+            time.sleep(0.5)
+            continue
         try:
             data = ser.read(ser.in_waiting or 1)
             if data:
@@ -259,28 +266,129 @@ def serial_tx():
     """Sends data periodically over the serial port."""
     global run_threads
     last_execute = time.time()
-    while run_threads:        
-        while not tx_queue.empty():
-            ser.write(tx_queue.get_nowait())
-            ser.flush()
-            print("sent command")
+    while run_threads:
+        if ser == None or ser_lock:
+            time.sleep(0.5)
+            continue
 
+        try:
+            while not tx_queue.empty():            
+                ser.write(tx_queue.get_nowait())
+                ser.flush()
+                print("sent command")
 
-
-        if time.time() - last_execute > 0.06:
-            ser.write(b"{}")
-            last_execute = time.time()
+            if time.time() - last_execute > 0.06:
+                ser.write(b"{}")
+                last_execute = time.time()
+        except Exception as e:
+            print(f"TX Error | {e}")
         time.sleep(0.0005)
 
 # ===================================================================
 
-if __name__ == "__main__":
-    # Start threads
-    trx = Thread(target=serial_rx, daemon=True)
-    ttx = Thread(target=serial_tx, daemon=True)
-    trx.start()
-    ttx.start()
+from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import QComboBox, QPushButton, QHBoxLayout, QWidget, QToolButton
+from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT
+import serial.tools.list_ports
+from PyQt6.QtWidgets import QComboBox, QPushButton, QLabel, QWidget, QHBoxLayout, QSizePolicy
+from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT
 
+class CustomToolbar(NavigationToolbar2QT):
+    def __init__(self, canvas, parent=None):
+        super().__init__(canvas, parent)
+
+        self.running = True
+
+        # Step 1: Remove all default actions
+        for action in self.actions():
+            self.removeAction(action)
+
+        # Step 2: Create left section widgets
+        self.port_dropdown = QComboBox()
+        self.connect_button = QPushButton("Connect")
+        self.connect_button.clicked.connect(self.connect_serial)
+
+        # Step 3: Create center title widget
+        self.title_label = QLabel("OTV DAQ Ground Station")
+        self.title_label.setStyleSheet("font-weight: bold; font-size: 14px;")
+        #self.title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.title_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+
+        # Step 4: Create a flexible container widget to hold all parts
+        container = QWidget()
+        layout = QHBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        # Add widgets in order
+        layout.addWidget(self.port_dropdown)
+        layout.addWidget(self.connect_button)
+        layout.addStretch()  # spacer before title
+        layout.addWidget(self.title_label, alignment=Qt.AlignmentFlag.AlignCenter)
+        layout.addStretch()  # spacer after title
+
+        edit_button = QToolButton()
+        edit_button.setDefaultAction(self._actions['edit_parameters'])
+        layout.addWidget(edit_button)
+
+        #layout.addWidget(.)  # wrench tool
+        container.setLayout(layout)
+
+        # Add final container widget to toolbar
+        self.addWidget(container)
+
+        self.refresh_ports()
+
+    def __del__(self):
+        super().__del__()
+        self.running = False
+
+    def refresh_ports(self):
+        ports = []
+        for port in serial.tools.list_ports.comports():
+            ports.append(port.device)
+
+        curr_ports = []
+        for i in range(len(self.port_dropdown)):
+            curr_ports.append(self.port_dropdown.itemText(i))
+
+        if ports != curr_ports:
+            self.port_dropdown.clear()
+            self.port_dropdown.addItems(ports)
+
+        if ser != None and ser.port not in ports:
+            self.connect_serial()
+
+    def connect_serial(self):
+        global ser
+        global ser_lock
+
+        if ser == None: # connect
+            try:
+                selected_port = self.port_dropdown.currentText()
+                ser = serial.Serial(selected_port, 115200, timeout=1)
+                time.sleep(0.1)
+                self.connect_button.setText("Disconnect")
+            except Exception as e:
+                print(f"Serial Connect Error | {e}")
+        else:
+            ser_lock = True
+            time.sleep(0.1)
+            
+            ser.close()
+            ser = None
+
+            ser_lock = False
+
+            self.connect_button.setText("Connect")
+
+    def update_ports_thread(self):
+        global run_threads
+        while run_threads:
+            self.refresh_ports()
+            self.update()
+            time.sleep(0.5)
+
+if __name__ == "__main__":
     app = QApplication(sys.argv)
 
     # Configure Charts to be animated, and have proper margins
@@ -301,7 +409,8 @@ if __name__ == "__main__":
     layout.addWidget(canvas_charts, 10)
 
     # add toolbar and data layout to main layout
-    main_layout.addWidget(NavigationToolbar(canvas_charts, canvas_charts), 0)
+    toolbar = CustomToolbar(canvas_charts, None)
+    main_layout.addWidget(toolbar)
     main_layout.addLayout(layout)
 
     # setup main widget
@@ -309,6 +418,15 @@ if __name__ == "__main__":
     main_window.setCentralWidget(main_widget)
     main_window.setWindowTitle("SARP OTV DAQ GUI")
     main_window.setWindowIcon(QIcon("icon.png"))
+
+
+    # Start threads
+    trx = Thread(target=serial_rx, daemon=True)
+    ttx = Thread(target=serial_tx, daemon=True)
+    ttb = Thread(target=toolbar.update_ports_thread)
+    trx.start()
+    ttx.start()
+    ttb.start()
 
     # run GUI
     main_window.show()
@@ -318,4 +436,5 @@ if __name__ == "__main__":
     run_threads = False
     trx.join()
     ttx.join()
+    ttb.join()
     sys.exit(exit_code)
