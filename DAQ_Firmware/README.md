@@ -41,14 +41,14 @@
 		
     | Name	            | Abbreviation  | Nominal State    | Actuation Channel (0-15) | Command Channel | Physical Pins       |
     | ----------------------|---------------|------------------|--------------------------|-----------------|---------------------|
-    | Helium Bottle Valve   | HBV	    | Closed	       | 0, 1                     | 0               | PB_15               |
-    | Oxygen Bottle Valve   | OBV	    | Closed	       | 2, 3                     | 1               | PC_6                |
-    | Oxygen Purge Valve    | OPV	    | Closed	       | 4, 5                     | 2               | PC_7                |
-    | Fuel Vent Valve	    | FVV	    | Closed	       | 6, 7                     | 3               | PC_8                |
-    | Oxygen Vent Valve	    | OVV	    | Closed	       | 8, 9                     | 4               | PC_9                |
-    | Oxygen Main Valve	    | OMV	    | Closed	       | 10, 11                   | 5               | PA_9                |
-    | Fuel Main Valve	    | FMV	    | Closed	       | 12, 13                   | 6               | PA_11		  |
-    | Igniter	            | IGN	    | Off	       | 14, 15                   | 7               | PA_12               |
+    | Helium Bottle Valve   | HBV	    | Closed	       | 6, 7                     | 0               | PB_15               |
+    | Oxygen Bottle Valve   | OBV	    | Closed	       | 10, 11                   | 1               | PC_6                |
+    | Oxygen Purge Valve    | OPV	    | Closed	       | 12, 13                   | 2               | PC_7                |
+    | Fuel Vent Valve	    | FVV	    | Closed	       | 8, 9                     | 3               | PC_8                |
+    | Oxygen Vent Valve	    | OVV	    | Closed	       | 14, 15                   | 4               | PC_9                |
+    | Oxygen Main Valve	    | OMV	    | Closed	       | 0, 1                     | 5               | PA_9                |
+    | Fuel Main Valve	    | FMV	    | Closed	       | 2, 3                     | 6               | PA_11		  |
+    | Igniter	            | IGN	    | Off	       | 4, 5                     | 7               | PA_12               |
 
     ```
     // {S<C0><C1><C2><C3><C4><C5><C6><C7>}
