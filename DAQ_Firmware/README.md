@@ -39,16 +39,16 @@
 
     Actuate each solenoid group directly according to the table below, also found on [This Google Sheet](https://docs.google.com/spreadsheets/d/1ON2VdkJxlJqttcMQD-l6U2NdHoalpuC-nYF2xrq4dh4/edit?gid=0#gid=0). Actuation channel is the physical actuation hardware channel each device occupies. Command Channel is the command position (\<C0\> --> \<C7\>).
 		
-    | Name	            | Abbreviation  | Nominal State    | Actuation Channel (0-12) | Command Channel | Physical Pins       |
+    | Name	            | Abbreviation  | Nominal State    | Actuation Channel (0-15) | Command Channel | Physical Pins       |
     | ----------------------|---------------|------------------|--------------------------|-----------------|---------------------|
-    | Helium Bottle Valve   | HBV	    | Closed	       | 0                        | 0               | PB_15               |
-    | Oxygen Bottle Valve   | OBV	    | Closed	       | 1                        | 1               | PC_6                |
-    | Oxygen Purge Valve    | OPV	    | Closed	       | 2                        | 2               | PC_7                |
-    | Fuel Vent Valve	    | FVV	    | Closed	       | 3                        | 3               | PC_8                |
-    | Oxygen Vent Valve	    | OVV	    | Closed	       | 4, 5                     | 4               | PC_9, PA_8          |
-    | Oxygen Main Valve	    | OMV	    | Closed	       | 6, 7                     | 5               | PA_9, PA_10         |
-    | Fuel Main Valve	    | FMV	    | Closed	       | 8                        | 6               | PA_11		  |
-    | Igniter	            | IGN	    | Off	       | 9, 10, 11                | 7               | PA_12, PA_15, PC_12 |
+    | Helium Bottle Valve   | HBV	    | Closed	       | 6, 7                     | 0               | PB_15               |
+    | Oxygen Bottle Valve   | OBV	    | Closed	       | 10, 11                   | 1               | PC_6                |
+    | Oxygen Purge Valve    | OPV	    | Closed	       | 12, 13                   | 2               | PC_7                |
+    | Fuel Vent Valve	    | FVV	    | Closed	       | 8, 9                     | 3               | PC_8                |
+    | Oxygen Vent Valve	    | OVV	    | Closed	       | 14, 15                   | 4               | PC_9                |
+    | Oxygen Main Valve	    | OMV	    | Closed	       | 0, 1                     | 5               | PA_9                |
+    | Fuel Main Valve	    | FMV	    | Closed	       | 2, 3                     | 6               | PA_11		  |
+    | Igniter	            | IGN	    | Off	       | 4, 5                     | 7               | PA_12               |
 
     ```
     // {S<C0><C1><C2><C3><C4><C5><C6><C7>}
