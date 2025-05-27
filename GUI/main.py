@@ -29,13 +29,13 @@ from functools import partial
 
 CHARTS = ["HBPT"  , "OBPT"  , "OVPT", "RTD0",
           "HBTT"  , "OBTT"  , "FTPT", "RTD1",
-          "ADC6"  , "ADC7"  , "ADC8", "RTD2",
+          "OMPT"  , "PCPT"  , "FRMPT", "RTD2",
           "HE MFR", "OX MFR", "LC1" , "RTD3",
           ]
 
-TITLES = ["HBPT"  , "NBPT" , "NVPT", "RTD0",
-          "HBTT"  , "NBTT" , "WTPT", "RTD1",
-          "ADC6"  , "ADC7" , "ADC8", "RTD2",
+TITLES = ["HBPT"  , "OBPT" , "OVPT", "RTD0",
+          "HBTT"  , "OBTT" , "FTPT", "RTD1",
+          "OMPT"  , "PCPT" , "FRMPT", "RTD2",
           "HE MFR", "N MFR", "LC1" , "RTD3",
           ]
 
@@ -59,7 +59,28 @@ y_scale = [
     [-80, 160],
 ]
 
-BUTTONS = ["Mount", "Eject", "Fire", "Abort", "Pulse OX", "Pulse HE", "Pulse Fuel", "HBV Toggle", "OBV Toggle", "OPV Toggle", "FVV Toggle", "OVV Toggle", "OMV Toggle", "FMV Toggle", "IGN Toggle"]
+"""
+y_scale = [
+    [-1, 6],
+    [-1, 6],
+    [-1, 6],
+    [-1, 6],
+    [-1, 6],
+    [-1, 6],
+    [-1, 6],
+    [-1, 6],
+    [-1, 6],
+    [-1, 6],
+    [-1, 6],
+    [-1, 6],
+    [-1, 6],
+    [-1, 6],
+    [-1, 6],
+    [-1, 6],
+]
+"""
+
+BUTTONS        = ["Mount", "Eject", "Fire", "Abort", "Pulse OX", "Pulse HE", "Pulse Fuel", "FMV Toggle", "OMV Toggle", "IGN Toggle", "FVV Toggle", "HBV Toggle", "OPV Toggle", "OBV Toggle", "OVV Toggle"]
 ACTUATOR_INDEX = 7
 
 ser = None
