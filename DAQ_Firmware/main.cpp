@@ -29,6 +29,15 @@
 #define SD_SCLK PA_5
 #define SD_CS   PB_6
 
+#define FMV_CHANNEL 0
+#define OMV_CHANNEL 1
+#define IGN_CHANNEL 2
+#define FVV_CHANNEL 3
+#define HBV_CHANNEL 4
+#define OPV_CHANNEL 5
+#define OBV_CHANNEL 6
+#define OVV_CHANNEL 7
+
 // ==================== Logging ====================
     BufferedSerial ser(PA_2, PA_3, 115200);
     void printf_nb(const char* format, ...) {
@@ -72,68 +81,62 @@ vector<DigitalOut> solenoids;
         
         Timer i_timer;
         Timer fire_timer;
-        i_timer.start();
         
-        // fire igniter
-        solenoids[9].write(0);
-        solenoids[10].write(0);
-        solenoids[11].write(0);
-        log_nb("(%d ms) igniter on\n", cmd_timer.read_ms());
-
         // open FMV
-        solenoids[8].write(0);
+        solenoids[FMV_CHANNEL].write(1);
         log_nb("(%d ms) FMV open\n", cmd_timer.read_ms());
         
-        ThisThread::sleep_for(65ms);
+        ThisThread::sleep_for(480ms);
+
+        // fire igniter
+        i_timer.start();
+        solenoids[IGN_CHANNEL].write(1);
+        log_nb("(%d ms) igniter on\n", cmd_timer.read_ms());
 
         // open OMV
-        solenoids[6].write(0);
-        solenoids[7].write(0);
+        solenoids[OMV_CHANNEL].write(1);
         log_nb("(%d ms) OMV open\n", cmd_timer.read_ms());
 
         fire_timer.start();
 
         while (true) {
             // igniter off after 2s
-            if (i_timer.read_ms() >= 2000) {
+            if (i_timer.read_ms() >= 2800) {
                 i_timer.stop();
                 i_timer.reset();
 
-                solenoids[9].write(1);
-                solenoids[10].write(1);
-                solenoids[11].write(1);
+                solenoids[IGN_CHANNEL].write(0);
                 log_nb("(%d ms) igniter off\n", cmd_timer.read_ms());
             }
 
             // open OPV 15s after OMV opens
-            if (fire_timer.read_ms() >= 15000) {
+            if (fire_timer.read_ms() >= 3000) {
                 break;
             }
             ThisThread::yield();
         }
 
         // close OBV 15s after OMV opens
-        solenoids[1].write(1);
+        solenoids[OBV_CHANNEL].write(0);
         log_nb("(%d ms) OBV closed\n", cmd_timer.read_ms());
 
         // open OPV 15s after OMV opens
-        solenoids[2].write(0);
+        solenoids[OPV_CHANNEL].write(1);
         log_nb("(%d ms) OPV open\n", cmd_timer.read_ms());
 
         ThisThread::sleep_for(30s);
 
-        // close OPV and HBV
-        solenoids[2].write(1);
-        solenoids[0].write(1);
+        // close  HBV
+        solenoids[HBV_CHANNEL].write(0);
         log_nb("(%d ms) OPV and HBV closed\n", cmd_timer.read_ms());
 
         ThisThread::sleep_for(30s);
 
-        // close OMV and FMV
-        solenoids[6].write(1);
-        solenoids[7].write(1);
-        solenoids[8].write(1);
-        log_nb("(%d ms) OMV and FMV closed\n", cmd_timer.read_ms());
+        // close OPV, OMV and FMV
+        solenoids[OPV_CHANNEL].write(0);
+        solenoids[OMV_CHANNEL].write(0);
+        solenoids[FMV_CHANNEL].write(0);
+        log_nb("(%d ms) OPV, OMV and FMV closed\n", cmd_timer.read_ms());
 
         log_nb("(%d ms) Done Firing\n", cmd_timer.read_ms());
     }
@@ -144,11 +147,13 @@ vector<DigitalOut> solenoids;
 
         log_nb("(%d ms) Aborting\n", cmd_timer.read_ms());
 
-        solenoids[6].write(1);
-        solenoids[7].write(1);
-        solenoids[8].write(1);
+        solenoids[OMV_CHANNEL].write(0);
+        solenoids[FMV_CHANNEL].write(0);
+        solenoids[HBV_CHANNEL].write(0);
+        solenoids[OBV_CHANNEL].write(0);
+        solenoids[IGN_CHANNEL].write(0);
 
-        log_nb("(%d ms) OMV and FMV closed\n", cmd_timer.read_ms());
+        log_nb("(%d ms) OMV, FMV, HBV, OBV and IGN closed\n", cmd_timer.read_ms());
         log_nb("(%d ms) Done Aborting\n", cmd_timer.read_ms());
     }
 
@@ -158,12 +163,12 @@ vector<DigitalOut> solenoids;
 
         log_nb("(%d ms) Pulsing Fuel\n", cmd_timer.read_ms());
         
-        solenoids[8].write(0);
+        solenoids[FMV_CHANNEL].write(1);
         log_nb("(%d ms) FMV Open\n", cmd_timer.read_ms());
 
         ThisThread::sleep_for(pulse_ms);
         
-        solenoids[8].write(1);
+        solenoids[FMV_CHANNEL].write(0);
         log_nb("(%d ms) FMV Closed\n", cmd_timer.read_ms());
 
         log_nb("(%d ms) Done Pulsing Fuel\n", cmd_timer.read_ms());
@@ -175,12 +180,12 @@ vector<DigitalOut> solenoids;
 
         log_nb("(%d ms) Pulsing Helium\n", cmd_timer.read_ms());
         
-        solenoids[0].write(0);
+        solenoids[HBV_CHANNEL].write(1);
         log_nb("(%d ms) HBV Open\n", cmd_timer.read_ms());
 
         ThisThread::sleep_for(pulse_ms);
         
-        solenoids[0].write(1);
+        solenoids[HBV_CHANNEL].write(0);
         log_nb("(%d ms) HBV Closed\n", cmd_timer.read_ms());
 
         log_nb("(%d ms) Done Pulsing Helium\n", cmd_timer.read_ms());
@@ -192,14 +197,12 @@ vector<DigitalOut> solenoids;
 
         log_nb("(%d ms) Pulsing Oxygen\n", cmd_timer.read_ms());
         
-        solenoids[6].write(0);
-        solenoids[7].write(0);
+        solenoids[OMV_CHANNEL].write(1);
         log_nb("(%d ms) OMV Open\n", cmd_timer.read_ms());
 
         ThisThread::sleep_for(pulse_ms);
         
-        solenoids[6].write(1);
-        solenoids[7].write(1);
+        solenoids[OMV_CHANNEL].write(0);
         log_nb("(%d ms) OMV Closed\n", cmd_timer.read_ms());
 
         log_nb("(%d ms) Done Pulsing Oxygen\n", cmd_timer.read_ms());
@@ -276,7 +279,7 @@ int main() {
     SensorEventQueue queue;   
 
     // ======== Load Cell Setup ========
-        LoadCellSensor lc1("LC1", PB_10, PB_14, 1.892f, 4.55f, 4.55f, 588.399f);
+        LoadCellSensor lc1("LC1", PC_9, PB_8, 1.892f, 4.55f, 4.55f, 588.399f);
         lc1.set_sd(&sd, &sd_mutex);
         queue.queue(callback(&lc1, &LoadCellSensor::sample_log), 100);
     //  =================================
@@ -286,7 +289,7 @@ int main() {
         SPI spi(PB_2, PC_11, PC_10);
         spi.format(8, 1); 
 
-        RTD rtd0("RTD0", &spi, PC_3);
+        RTD rtd0("RTD0", &spi, PC_5);
         RTD rtd1("RTD1", &spi, PB_12);
         RTD rtd2("RTD2", &spi, PB_13);
         RTD rtd3("RTD3", &spi, PB_7);
@@ -299,15 +302,39 @@ int main() {
     // =================================
 
     // =========== ADC Setup ===========
-        ADCSensor adc0("HBTT", PC_3, (1.5f / 4.0f) * 160, -63.0f, 5);
-        ADCSensor adc1("FTPT", PC_0, (1.5f / 4.0f) * 500, -63.5f, 5);
-        ADCSensor adc2("OBPT", PC_2, (1.5f / 4.0f) * 5000, -625.0f, 20);
-        ADCSensor adc3("OBTT", PC_1, (1.5f / 4.0f) * 160, -63.0f, 5);
-        ADCSensor adc4("HBPT", PB_0, (1.5f / 4.0f) * 5000, -625.0f, 20);
-        ADCSensor adc5("OVPT", PA_4, (1.5f / 4.0f) * 500,-62.5f, 5);
-        ADCSensor adc6("ADC6", PA_1, 1.5f, 0, 5);
-        ADCSensor adc7("ADC7", PA_0, 1.5f, 0, 5);
+/*        ADCSensor adc0("HBTT", PA_0, (1.5f / 4.0f) * 160, -63.0f, 5);
+        ADCSensor adc1("FTPT", PA_1, (1.5f / 4.0f) * 500, -63.5f, 5);
+        ADCSensor adc2("OBPT", PA_4, (1.5f / 4.0f) * 5000, -625.0f, 20);
+        ADCSensor adc3("OBTT", PB_0, (1.5f / 4.0f) * 160, -63.0f, 5);
+        ADCSensor adc4("HBPT", PC_1, (1.5f / 4.0f) * 5000, -625.0f, 20);
+        ADCSensor adc5("OVPT", PC_0, (1.5f / 4.0f) * 500,-62.5f, 5);
+        ADCSensor adc6("ADC6", PC_2, 1.5f, 0, 5);
+        ADCSensor adc7("ADC7", PC_3, 1.5f, 0, 5);
+        ADCSensor adc8("ADC8", PC_4, 1.5f, 0, 5);
+        */
+
+        /*
+        ADCSensor adc0("HBTT", PA_0, (1.5f / 4.0f), 0, 5);
+        ADCSensor adc1("FTPT", PA_1, (1.5f / 4.0f), 0, 5);
+        ADCSensor adc2("OBPT", PA_4, (1.5f / 4.0f), 0, 20);
+        ADCSensor adc3("OBTT", PB_0, (1.5f / 4.0f), 0, 5);
+        ADCSensor adc4("HBPT", PC_1, (1.5f / 4.0f), 0, 20);
+        ADCSensor adc5("OVPT", PC_0, (1.5f / 4.0f), 0, 5);
+        ADCSensor adc6("ADC6", PC_2, 1.5f, 0, 5);
+        ADCSensor adc7("ADC7", PC_3, 1.5f, 0, 5);
         ADCSensor adc8("ADC8", PC_5, 1.5f, 0, 5);
+        */
+
+        ADCSensor adc0("HBTT", PC_1, 1.5f, 0, 5);
+        ADCSensor adc1("FTPT", PC_2, (1.5f / 4.0f) * 500, -63.5, 5);
+        ADCSensor adc2("OBPT", PC_3, (1.5f / 4.0f) * 5000, -625, 20);
+        ADCSensor adc3("OBTT", PC_5, (1.5f / 4.0f) * 160, -63, 5);
+        ADCSensor adc4("HBPT", PC_0, (1.5f / 4.0f) * 5000, -625, 20);
+        ADCSensor adc5("OVPT", PB_0, (1.5f / 4.0f) * 500, -62.5, 5);
+        ADCSensor adc6("OMPT", PA_0, (1.5f / 4.0f) * 500, -62.5, 5);
+        ADCSensor adc7("PCPT", PC_4, 1.5f, 0, 5);
+        ADCSensor adc8("FRMPT", PA_1, (1.5f / 4.0f) * 500, -62.5, 5);
+
         vector<ADCSensor*> adcs = {&adc0, &adc1, &adc2, &adc3, &adc4, &adc5, &adc6, &adc7, &adc8};
 
         for (ADCSensor* adc : adcs) {
@@ -317,12 +344,12 @@ int main() {
     // =================================
     
     // ======== Actuation Setup ========
-        PinName actuation_pins[12] = {PB_15, PC_6, PC_7, PC_8, PC_9, PA_8, PA_9, PA_10, PA_11, PA_12, PA_15, PC_12};
+        PinName actuation_pins[8] = {PB_1, PB_15, PB_14, PA_8, PB_10, PB_4, PB_5, PB_3};
         // declared in global
         // vector<DigitalOut> solenoids;
         for (PinName pin: actuation_pins) {
             DigitalOut p(pin);
-            p.write(1);
+            p.write(0);
             solenoids.push_back(p);
         }
     // =================================
@@ -395,23 +422,15 @@ int main() {
                             cmd_thread->terminate();
                             delete cmd_thread;
                             cmd_thread = new Thread;
-                            
-                            log_nb("%s\n", &buf[1]);
 
-                            log_nb("%d\n", buf[4] == '0');
-
-                            solenoids[0].write(buf[0+1] == '0');
-                            solenoids[1].write(buf[1+1] == '0');
-                            solenoids[2].write(buf[2+1] == '0');
-                            solenoids[3].write(buf[3+1] == '0');
-                            solenoids[4].write(buf[4+1] == '0');
-                            solenoids[5].write(buf[4+1] == '0');
-                            solenoids[6].write(buf[5+1] == '0');
-                            solenoids[7].write(buf[5+1] == '0');
-                            solenoids[8].write(buf[6+1] == '0');
-                            solenoids[9].write(buf[7+1] == '0');
-                            solenoids[10].write(buf[7+1] == '0');
-                            solenoids[11].write(buf[7+1] == '0');
+                            solenoids[0].write(buf[0+1] == '1');
+                            solenoids[1].write(buf[1+1] == '1');
+                            solenoids[2].write(buf[2+1] == '1');
+                            solenoids[3].write(buf[3+1] == '1');
+                            solenoids[4].write(buf[4+1] == '1');
+                            solenoids[5].write(buf[5+1] == '1');
+                            solenoids[6].write(buf[6+1] == '1');
+                            solenoids[7].write(buf[7+1] == '1');
                         }
 
                         else if (buf[0] == 'C') { // Command Sequence
@@ -542,9 +561,9 @@ int main() {
 
                             printf_nb("\"%s\" : [%d, %f, %f], ", lc1.name, time, value, raw);
                             printf_nb("\"actuators\" : [%d, %d, %d, %d, %d, %d, %d, %d]",
-                                solenoids[0].read() == 0, solenoids[1].read() == 0, solenoids[2].read() == 0,
-                                solenoids[3].read() == 0, solenoids[4].read() == 0, solenoids[6].read() == 0,
-                                solenoids[8].read() == 0, solenoids[9].read() == 0
+                                solenoids[0].read() == 1, solenoids[1].read() == 1, solenoids[2].read() == 1,
+                                solenoids[3].read() == 1, solenoids[4].read() == 1, solenoids[5].read() == 1,
+                                solenoids[6].read() == 1, solenoids[7].read() == 1
                             );
 
                             printf_nb("}\n");
