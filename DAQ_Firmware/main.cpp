@@ -19,6 +19,7 @@
 #include "RTD.h"
 #include "ADC.h"
 #include "LoadCellSensor.h"
+#include "FlowMeter.h"
 #include "SensorEventQueue.h"
 
 #define UART_TX PA_2
@@ -74,11 +75,22 @@ void serial_isr() {
 
 vector<DigitalOut> solenoids;
 // =============== Command Sequences ===============
-    void cmd_fire() {
+    void cmd_fire(uint32_t fire_time_ms = 15000, uint32_t valve_delay_ms = 480) {
+        const uint32_t igniter_time = 2800;
+
         Timer cmd_timer;
         cmd_timer.start();
         log_nb("(%d ms) Firing\n", cmd_timer.read_ms());
         
+        if (fire_time_ms < igniter_time + 200) {
+            log_nb("(%d ms) Error Firing, fire_time is less than igniter time\n", cmd_timer.read_ms());
+            return;
+        }
+        if (valve_delay_ms > igniter_time) {
+            log_nb("(%d ms) Error Firing, valve delay is less than igniter time\n", cmd_timer.read_ms());
+            return;
+        }
+
         Timer i_timer;
         Timer fire_timer;
         
@@ -86,7 +98,7 @@ vector<DigitalOut> solenoids;
         solenoids[FMV_CHANNEL].write(1);
         log_nb("(%d ms) FMV open\n", cmd_timer.read_ms());
         
-        ThisThread::sleep_for(480ms);
+        ThisThread::sleep_for(valve_delay_ms);
 
         // fire igniter
         i_timer.start();
@@ -101,7 +113,7 @@ vector<DigitalOut> solenoids;
 
         while (true) {
             // igniter off after 2s
-            if (i_timer.read_ms() >= 2800) {
+            if (i_timer.read_ms() >= igniter_time) {
                 i_timer.stop();
                 i_timer.reset();
 
@@ -110,7 +122,7 @@ vector<DigitalOut> solenoids;
             }
 
             // open OPV 15s after OMV opens
-            if (fire_timer.read_ms() >= 3000) {
+            if (fire_timer.read_ms() >= fire_time_ms) {
                 break;
             }
             ThisThread::yield();
@@ -167,7 +179,7 @@ vector<DigitalOut> solenoids;
         log_nb("(%d ms) FMV Open\n", cmd_timer.read_ms());
 
         ThisThread::sleep_for(pulse_ms);
-        
+
         solenoids[FMV_CHANNEL].write(0);
         log_nb("(%d ms) FMV Closed\n", cmd_timer.read_ms());
 
@@ -277,6 +289,11 @@ int main() {
 
     
     SensorEventQueue queue;   
+    // ======== Flowmeter Setup ========
+        FlowMeterSensor fm1("FM1", PC_13, 0.324f);
+        fm1.set_sd(&sd, &sd_mutex);
+        queue.queue(callback(&fm1, &FlowMeterSensor::sample_log), 100);
+    //  =================================
 
     // ======== Load Cell Setup ========
         LoadCellSensor lc1("LC1", PC_9, PB_8, 1.892f, 4.55f, 4.55f, 588.399f);
@@ -302,38 +319,15 @@ int main() {
     // =================================
 
     // =========== ADC Setup ===========
-/*        ADCSensor adc0("HBTT", PA_0, (1.5f / 4.0f) * 160, -63.0f, 5);
-        ADCSensor adc1("FTPT", PA_1, (1.5f / 4.0f) * 500, -63.5f, 5);
-        ADCSensor adc2("OBPT", PA_4, (1.5f / 4.0f) * 5000, -625.0f, 20);
-        ADCSensor adc3("OBTT", PB_0, (1.5f / 4.0f) * 160, -63.0f, 5);
-        ADCSensor adc4("HBPT", PC_1, (1.5f / 4.0f) * 5000, -625.0f, 20);
-        ADCSensor adc5("OVPT", PC_0, (1.5f / 4.0f) * 500,-62.5f, 5);
-        ADCSensor adc6("ADC6", PC_2, 1.5f, 0, 5);
-        ADCSensor adc7("ADC7", PC_3, 1.5f, 0, 5);
-        ADCSensor adc8("ADC8", PC_4, 1.5f, 0, 5);
-        */
-
-        /*
-        ADCSensor adc0("HBTT", PA_0, (1.5f / 4.0f), 0, 5);
-        ADCSensor adc1("FTPT", PA_1, (1.5f / 4.0f), 0, 5);
-        ADCSensor adc2("OBPT", PA_4, (1.5f / 4.0f), 0, 20);
-        ADCSensor adc3("OBTT", PB_0, (1.5f / 4.0f), 0, 5);
-        ADCSensor adc4("HBPT", PC_1, (1.5f / 4.0f), 0, 20);
-        ADCSensor adc5("OVPT", PC_0, (1.5f / 4.0f), 0, 5);
-        ADCSensor adc6("ADC6", PC_2, 1.5f, 0, 5);
-        ADCSensor adc7("ADC7", PC_3, 1.5f, 0, 5);
-        ADCSensor adc8("ADC8", PC_5, 1.5f, 0, 5);
-        */
-
-        ADCSensor adc0("HBTT", PC_1, 1.5f, 0, 5);
-        ADCSensor adc1("FTPT", PC_2, (1.5f / 4.0f) * 500, -63.5, 5);
-        ADCSensor adc2("OBPT", PC_3, (1.5f / 4.0f) * 5000, -625, 20);
-        ADCSensor adc3("OBTT", PC_5, (1.5f / 4.0f) * 160, -63, 5);
-        ADCSensor adc4("HBPT", PC_0, (1.5f / 4.0f) * 5000, -625, 20);
-        ADCSensor adc5("OVPT", PB_0, (1.5f / 4.0f) * 500, -62.5, 5);
-        ADCSensor adc6("OMPT", PA_0, (1.5f / 4.0f) * 500, -62.5, 5);
-        ADCSensor adc7("PCPT", PC_4, 1.5f, 0, 5);
-        ADCSensor adc8("FRMPT", PA_1, (1.5f / 4.0f) * 500, -62.5, 5);
+        ADCSensor adc0("HBTT" , PC_1, 1.5f, 0, 5);
+        ADCSensor adc1("FTPT" , PC_2, (1.5f / 4.0f) * 500, -63.5, 5);
+        ADCSensor adc2("OBPT" , PC_3, (1.5f / 4.0f) * 5000, -625, 20);
+        ADCSensor adc3("OBTT" , PC_5, (1.5f / 4.0f) * 160, -63, 5);
+        ADCSensor adc4("HBPT" , PC_0, (1.5f / 4.0f) * 5000, -625, 20);
+        ADCSensor adc5("OVPT" , PB_0, (1.5f / 4.0f) * 500, -62.5, 5);
+        ADCSensor adc6("OMPT" , PA_0, (1.5f / 4.0f) * 500, -62.5, 5);
+        ADCSensor adc7("PCPT" , PA_1, (1.5f / 4.0f) * 500, -62.5, 5);
+        ADCSensor adc8("FRMPT", PC_4, (1.5f / 4.0f) * 500, -62.5, 5);
 
         vector<ADCSensor*> adcs = {&adc0, &adc1, &adc2, &adc3, &adc4, &adc5, &adc6, &adc7, &adc8};
 
@@ -438,7 +432,18 @@ int main() {
                                 cmd_thread->terminate();
                                 delete cmd_thread;
                                 cmd_thread = new Thread;
-                                cmd_thread->start(cmd_fire);
+                                uint32_t fire_time = 15000;
+                                uint32_t valve_delay = 480;
+
+                                uint32_t ftemp;
+                                uint32_t vtemp;
+                                int res = sscanf(&buf[3], "%d,%d", &ftemp, &vtemp);
+                                if (res >= 1)
+                                    fire_time = ftemp;
+                                if (res >= 2)
+                                    valve_delay = vtemp;
+
+                                cmd_thread->start([fire_time, valve_delay]() {cmd_fire(fire_time, valve_delay);});
                             }
                             else if (buf[1] == 'A' && buf[2] == 'B') {
                                 cmd_thread->terminate();
@@ -551,8 +556,14 @@ int main() {
 
                             float he_mfr = mass_flow(he_dpres, he_temp, HE_VOLUME, HE_R, he_dt);
                             float ox_mfr = mass_flow(ox_dpres, ox_temp, OX_VOLUME, OX_R, ox_dt);
-                            printf_nb("\"HE MFR\" : [%d, %f], ", he_time, he_mfr);
+                            //printf_nb("\"HE MFR\" : [%d, %f], ", he_time, he_mfr);
                             printf_nb("\"OX MFR\" : [%d, %f], ", ox_time, ox_mfr);
+
+                            float fm_value;
+                            uint32_t fm_raw;
+                            int fm_ms;
+                            fm1.last_data(&fm_value, &fm_raw, &fm_ms);
+                            printf_nb("\"F MFR\" : [%d, %f], ", fm_ms, fm_value);
 
                             int time;
                             float value;
