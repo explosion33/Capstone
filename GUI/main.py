@@ -13,7 +13,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 
 from PyQt6.QtGui import QIcon
-from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QHBoxLayout, QVBoxLayout
+from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QLineEdit, QLabel, QSpinBox
 
 import sys
 import time
@@ -30,13 +30,13 @@ from functools import partial
 CHARTS = ["HBPT"  , "OBPT"  , "OVPT", "RTD0",
           "HBTT"  , "OBTT"  , "FTPT", "RTD1",
           "OMPT"  , "PCPT"  , "FRMPT", "RTD2",
-          "HE MFR", "OX MFR", "LC1" , "RTD3",
+          "F MFR", "OX MFR", "LC1" , "RTD3",
           ]
 
 TITLES = ["HBPT"  , "OBPT" , "OVPT", "RTD0",
           "HBTT"  , "OBTT" , "FTPT", "RTD1",
           "OMPT"  , "PCPT" , "FRMPT", "RTD2",
-          "HE MFR", "N MFR", "LC1" , "RTD3",
+          "Fuel MFR", "OX MFR", "Load Cell" , "RTD3",
           ]
 
 
@@ -49,12 +49,12 @@ y_scale = [
     [-80, 160],
     [-100, 600],
     [-80, 160],
-    [-2, 7],
-    [-2, 7],
-    [-2, 7],
+    [-100, 600],
+    [-100, 600],
+    [-100, 600],
     [-80, 160],
-    [-0.1, 0.3],
-    [-0.1, 0.3],
+    [-10, 100],
+    [-20, 150],
     [-200, 5000],
     [-80, 160],
 ]
@@ -88,7 +88,10 @@ ser_lock = False
 tx_queue = queue.Queue()
 run_threads = True
 
-    
+fire_time   = None
+valve_delay = None
+pulse_time  = None   
+
 # =============== Setup MatPlotLib charts and buttons ===============
 matplotlib.use('QtAgg')
 
@@ -125,19 +128,19 @@ def on_button_clicked(index, _event):
         tx_queue.put(b"{DE}\n")
     elif index == 2:
         print("Firing")
-        tx_queue.put(b"{CFI}\n")
+        tx_queue.put(f"{{CFI{fire_time.value()},{valve_delay.value()}}}\n".encode())
     elif index == 3:
         print("Aborting")
         tx_queue.put(b"{CAB}\n")
     elif index == 4:
         print("Pulsing Ox")
-        tx_queue.put(b"{COP}\n")
+        tx_queue.put(f"{{COP{pulse_time.value()}}}\n".encode())
     elif index == 5:
         print("Pulsing HE")
-        tx_queue.put(b"{CHP}\n")
+        tx_queue.put(f"{{CHP{pulse_time.value()}}}\n".encode())
     elif index == 6:
         print("Pulsing Fuel")
-        tx_queue.put(b"{CFP}\n")
+        tx_queue.put(f"{{CFP{pulse_time.value()}}}\n".encode())
     elif index >= 7:
         print("Toggling Actuator")
         
@@ -188,6 +191,7 @@ for row in range(4):
         plot_index += 1
 
 plt.tight_layout()
+
 
 for i, label in enumerate(BUTTONS):
     ax_btn = fig_buttons.add_subplot(gs_buttons[i, 0])
@@ -320,22 +324,21 @@ class CustomToolbar(NavigationToolbar2QT):
 
         self.running = True
 
-        # Step 1: Remove all default actions
+        # remove all default buttons from toolbar
         for action in self.actions():
             self.removeAction(action)
 
-        # Step 2: Create left section widgets
+        # create drop down for port select
         self.port_dropdown = QComboBox()
         self.connect_button = QPushButton("Connect")
         self.connect_button.clicked.connect(self.connect_serial)
 
-        # Step 3: Create center title widget
+        # create title
         self.title_label = QLabel("OTV DAQ Ground Station")
         self.title_label.setStyleSheet("font-weight: bold; font-size: 14px;")
-        #self.title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.title_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
 
-        # Step 4: Create a flexible container widget to hold all parts
+        # add layout container
         container = QWidget()
         layout = QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
@@ -347,14 +350,12 @@ class CustomToolbar(NavigationToolbar2QT):
         layout.addWidget(self.title_label, alignment=Qt.AlignmentFlag.AlignCenter)
         layout.addStretch()  # spacer after title
 
+        # add back chart edit tool button
         edit_button = QToolButton()
         edit_button.setDefaultAction(self._actions['edit_parameters'])
         layout.addWidget(edit_button)
 
-        #layout.addWidget(.)  # wrench tool
         container.setLayout(layout)
-
-        # Add final container widget to toolbar
         self.addWidget(container)
 
         self.refresh_ports()
@@ -424,9 +425,36 @@ if __name__ == "__main__":
     main_widget = QWidget()
     main_layout = QVBoxLayout()
     layout = QHBoxLayout()
+    button_layout = QVBoxLayout()
+
+    # create Fire Time TextBox 
+    fire_time_label = QLabel("Fire Time (ms):")
+    fire_time = QSpinBox()
+    fire_time.setRange(0, 15000)
+    fire_time.setValue(15000)
+
+    # create Valve Delay TextBox 
+    valve_delay_label = QLabel("Valve Delay (ms):")
+    valve_delay = QSpinBox()
+    valve_delay.setRange(0, 2000)
+    valve_delay.setValue(480)
+
+    # create Pulse Time TextBox 
+    pulse_time_label = QLabel("Pulse Time (ms):")
+    pulse_time = QSpinBox()
+    pulse_time.setRange(0, 1000)
+    pulse_time.setValue(100)
+
+    button_layout.addWidget(fire_time_label)
+    button_layout.addWidget(fire_time)
+    button_layout.addWidget(valve_delay_label)
+    button_layout.addWidget(valve_delay)
+    button_layout.addWidget(pulse_time_label)
+    button_layout.addWidget(pulse_time)
+    button_layout.addWidget(canvas_buttons)
 
     # Add figures to data layout
-    layout.addWidget(canvas_buttons, 1)
+    layout.addLayout(button_layout, 1)
     layout.addWidget(canvas_charts, 10)
 
     # add toolbar and data layout to main layout
