@@ -80,8 +80,9 @@ y_scale = [
 ]
 """
 
-BUTTONS        = ["Mount", "Eject", "Fire", "Abort", "Pulse OX", "Pulse HE", "Pulse Fuel", "FMV Toggle", "OMV Toggle", "IGN Toggle", "FVV Toggle", "HBV Toggle", "OPV Toggle", "OBV Toggle", "OVV Toggle"]
-ACTUATOR_INDEX = 7
+BUTTONS          = ["Mount", "Eject", "Fire", "Abort", "Pulse OX", "Pulse HE", "Pulse Fuel", "FMV Toggle", "OMV Toggle", "IGN Toggle", "FVV Toggle", "HBV Toggle", "OPV Toggle", "OBV Toggle", "OVV Toggle"]
+ACTUATOR_INDEX   = 7
+ACTUATOR_NORMALS = [0, 0, 0, 1, 0, 0, 0, 1]
 
 ser = None
 ser_lock = False
@@ -202,7 +203,7 @@ for i, label in enumerate(BUTTONS):
 def update(frame):
     global actuator_states
     for i in range(ACTUATOR_INDEX, len(BUTTONS)):
-        color = "#90EE90" if (actuator_states[i-ACTUATOR_INDEX] == 1) else "#FFA500"
+        color = "#90EE90" if (actuator_states[i-ACTUATOR_INDEX] != ACTUATOR_NORMALS[i-ACTUATOR_INDEX]) else "#FFA500"
         hcolor = "#BDFCC9" if (color == "#90EE90") else "#FFD580"
         if buttons[i].color != color:
             buttons[i].color = color
@@ -430,19 +431,19 @@ if __name__ == "__main__":
     # create Fire Time TextBox 
     fire_time_label = QLabel("Fire Time (ms):")
     fire_time = QSpinBox()
-    fire_time.setRange(0, 15000)
+    fire_time.setRange(0, 60000)
     fire_time.setValue(15000)
 
     # create Valve Delay TextBox 
     valve_delay_label = QLabel("Valve Delay (ms):")
     valve_delay = QSpinBox()
-    valve_delay.setRange(0, 2000)
+    valve_delay.setRange(0, 10000)
     valve_delay.setValue(480)
 
     # create Pulse Time TextBox 
     pulse_time_label = QLabel("Pulse Time (ms):")
     pulse_time = QSpinBox()
-    pulse_time.setRange(0, 1000)
+    pulse_time.setRange(0, 2000)
     pulse_time.setValue(100)
 
     button_layout.addWidget(fire_time_label)

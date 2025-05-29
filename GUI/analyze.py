@@ -23,7 +23,7 @@ def rolling_avg(data, window=100):
     for i in range(len(data)-window):
         out.append(sum(data[i:i+window]) / window)
 
-sensor = "FTPT"
+sensor = "FM1"
 log = "log.txt"
 
 data = get_data(log)[sensor]
@@ -39,7 +39,7 @@ for i in range(len(data["Y"])-100):
 
 print(dpi, dp)
 
-s = dpi#int(len(data["X"]) / 2) + 15000
+s = 0#dpi#int(len(data["X"]) / 2) + 15000
 f = len(data["X"])
 
 plt.plot(data["X"][s:f], data["Y"][s:f])
