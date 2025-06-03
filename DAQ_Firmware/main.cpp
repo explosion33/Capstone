@@ -91,8 +91,14 @@ vector<DigitalOut> solenoids;
             return;
         }
 
-        Timer i_timer;
-        Timer fire_timer;
+        //Timer i_timer;
+        //Timer fire_timer;
+
+        // fire igniter
+        solenoids[IGN_CHANNEL].write(1);
+        log_nb("(%d ms) igniter on\n", cmd_timer.read_ms());
+
+        ThisThread::sleep_for(2s);
         
         // open FMV
         solenoids[FMV_CHANNEL].write(1);
@@ -100,17 +106,20 @@ vector<DigitalOut> solenoids;
         
         ThisThread::sleep_for(valve_delay_ms);
 
-        // fire igniter
-        i_timer.start();
-        solenoids[IGN_CHANNEL].write(1);
-        log_nb("(%d ms) igniter on\n", cmd_timer.read_ms());
+        
+        //i_timer.start();
 
         // open OMV
         solenoids[OMV_CHANNEL].write(1);
         log_nb("(%d ms) OMV open\n", cmd_timer.read_ms());
 
-        fire_timer.start();
+        //fire_timer.start();
 
+
+        ThisThread::sleep_for(fire_time_ms);
+
+
+        /*
         while (true) {
             // igniter off after 2s
             if (i_timer.read_ms() >= igniter_time) {
@@ -127,6 +136,10 @@ vector<DigitalOut> solenoids;
             }
             ThisThread::yield();
         }
+        */
+
+        solenoids[IGN_CHANNEL].write(0);
+        log_nb("(%d ms) igniter off\n", cmd_timer.read_ms());
 
         // close OBV 15s after OMV opens
         solenoids[OBV_CHANNEL].write(0);

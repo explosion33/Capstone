@@ -319,6 +319,57 @@ import serial.tools.list_ports
 from PyQt6.QtWidgets import QComboBox, QPushButton, QLabel, QWidget, QHBoxLayout, QSizePolicy
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT
 
+class CommandLineEdit(QLineEdit):
+    def __init__(self):
+        super().__init__()
+
+        self.commands = ["1", "2", "3"]
+        self.command_index = None
+        self.last_loaded_index = 0
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key.Key_Up:
+            if len(self.commands) > 0:
+                if self.command_index is None:
+                    self.command_index = 0
+                else:
+                    self.command_index += 1
+                    if self.command_index >= len(self.commands):
+                        self.command_index = len(self.commands) - 1
+
+                self.setText(self.commands[self.command_index])
+
+        elif event.key() == Qt.Key.Key_Down:
+            if len(self.commands) > 0:
+                if self.command_index == 0:
+                    self.command_index = None
+                    self.clear()
+
+                if self.command_index != None:
+                    self.command_index -= 1
+                    self.setText(self.commands[self.command_index])
+                    
+        elif event.key() in [Qt.Key.Key_Enter, Qt.Key.Key_Return]:
+            self.submit()
+        else:
+            super().keyPressEvent(event)
+
+    def submit(self):
+        cmd = self.text()
+
+        if len(cmd) != 0 and cmd != self.commands[0] and (self.command_index is None or cmd != self.commands[self.command_index]):
+            self.commands.insert(0, cmd)
+            if (len(self.commands) > 100):
+                self.commands.pop(-1)
+        self.command_index = None
+
+        print(f"sending \"{{{cmd}}}\\n\"")
+        tx_queue.put(f"{{{cmd}}}\n".encode())
+
+        self.clear()
+
+        print(self.commands, self.command_index)
+
 class CustomToolbar(NavigationToolbar2QT):
     def __init__(self, canvas, parent=None):
         super().__init__(canvas, parent)
@@ -333,6 +384,11 @@ class CustomToolbar(NavigationToolbar2QT):
         self.port_dropdown = QComboBox()
         self.connect_button = QPushButton("Connect")
         self.connect_button.clicked.connect(self.connect_serial)
+
+        # create command box
+        self.command_box = CommandLineEdit()
+        self.command_submit = QPushButton("Send")
+        self.command_submit.clicked.connect(self.command_box.submit)
 
         # create title
         self.title_label = QLabel("OTV DAQ Ground Station")
@@ -350,6 +406,9 @@ class CustomToolbar(NavigationToolbar2QT):
         layout.addStretch()  # spacer before title
         layout.addWidget(self.title_label, alignment=Qt.AlignmentFlag.AlignCenter)
         layout.addStretch()  # spacer after title
+
+        layout.addWidget(self.command_box)
+        layout.addWidget(self.command_submit)
 
         # add back chart edit tool button
         edit_button = QToolButton()

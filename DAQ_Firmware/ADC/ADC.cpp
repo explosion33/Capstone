@@ -78,20 +78,25 @@ void ADCSensor::set_offset(float offset) {
 }
 
 void ADCSensor::tare(float expected) {
+    const size_t sample_size = 50000;
     this->dataMutex.lock();
 
     float raw = 0;
-    for (int i = 0; i<100; i++) {
+    for (int i = 0; i<sample_size; i++) {
         raw += this->adc.read();
-        ThisThread::sleep_for(10ms);
+        wait_us(10);
     }
 
-    raw /= 100.0f;
+    raw /= (float) sample_size;
 
     float val = raw * 3.3f;
     val *= this->gain;
+    val += this->offset;
 
-    this->offset = expected - val;
+    printf("log: raw (%f), val (%f), gain (%f), off (%f)\n", raw, val, this->gain, this->offset);
+
+    this->offset += (expected - val);
+
 
     this->dataMutex.unlock();
 }

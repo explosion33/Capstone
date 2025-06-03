@@ -68,23 +68,36 @@ void LoadCellSensor::set_offset(float offset) {
 }
 
 void LoadCellSensor::tare(float expected) {
+    const size_t sample_size = 50000;
+
     this->dataMutex.lock();
 
     float _raw = 0;
-
-    for (int i = 0; i<100; i++) {
-        if (!hx711.isReady()) {
-            continue;
+    size_t count = 0;
+    Timer to;
+    to.start();
+    while (true) {
+        if (to.read_ms() > 6000) {
+            this->dataMutex.unlock();
+            return;
         }
 
-        _raw += hx711.read();
+        if (hx711.isReady()) {
+            _raw += hx711.read();
+            count ++;
+            if (count == sample_size) {
+                break;
+            }
+        }
+
     }
 
-    _raw /= 100.0f;
+    _raw /= (float)sample_size;
 
     float _value = (_raw) / (this->MVV * this->excitation) * this->gain;
+    _value -= this->offset;
 
-    this->offset = expected - _value;
+    this->offset += expected - _value;
 
     this->dataMutex.unlock();
 }
