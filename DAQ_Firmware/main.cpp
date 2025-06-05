@@ -309,7 +309,7 @@ int main() {
     //  =================================
 
     // ======== Load Cell Setup ========
-        LoadCellSensor lc1("LC1", PC_9, PB_8, 1.892f, 4.55f, 4.55f, 646.232f, 6.787f);
+        LoadCellSensor lc1("LC1", PC_9, PB_8, 1.892f, 4.55f, 4.55f, 594.405f, -87.455f);
         lc1.set_sd(&sd, &sd_mutex);
         queue.queue(callback(&lc1, &LoadCellSensor::sample_log), 100);
     //  =================================
